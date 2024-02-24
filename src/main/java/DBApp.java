@@ -1,6 +1,11 @@
 
 /** * @author Wael Abouelsaadat */ 
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Hashtable;
 
@@ -37,6 +42,28 @@ public class DBApp {
 		if(htblColNameType.get(strClusteringKeyColumn)==null){
 			throw new DBAppException("strClusteringKeyColumn not found");
 		}
+		File file = new File("src/main/TableNames/"+strTableName);
+		if(file.exists())
+			throw new DBAppException("Table Already Exists");
+		Enumeration<String> keys = htblColNameType.keys();
+		Boolean flagClust = false;
+		while(keys.hasMoreElements()) {
+			String colName = keys.nextElement();
+			String colType = htblColNameType.get(colName);
+			Boolean flagType = false;
+			if(colName.equals(strClusteringKeyColumn))
+				flagClust = true;
+			if(colType == "java.lang.Integer" || colType == "java.lang.String" || colType == "java.lang.Double")
+				flagType = true;
+			else
+				flagType = false;
+			if(!flagType)
+				throw new DBAppException("Column data Type is not String/Double/Integer");
+		}
+		if(!flagClust)
+			throw new DBAppException("There is no Clusterkey");
+
+
 								
 		throw new DBAppException("not implemented yet");
 	}
