@@ -1,10 +1,7 @@
 
 /** * @author Wael Abouelsaadat */ 
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Hashtable;
@@ -46,13 +43,13 @@ public class DBApp {
 		if(file.exists())
 			throw new DBAppException("Table Already Exists");
 		Enumeration<String> keys = htblColNameType.keys();
-		Boolean flagClust = false;
+		Boolean flagCluster = false;
 		while(keys.hasMoreElements()) {
 			String colName = keys.nextElement();
 			String colType = htblColNameType.get(colName);
 			Boolean flagType = false;
 			if(colName.equals(strClusteringKeyColumn))
-				flagClust = true;
+				flagCluster = true;
 			if(colType == "java.lang.Integer" || colType == "java.lang.String" || colType == "java.lang.Double")
 				flagType = true;
 			else
@@ -60,10 +57,28 @@ public class DBApp {
 			if(!flagType)
 				throw new DBAppException("Column data Type is not String/Double/Integer");
 		}
-		if(!flagClust)
-			throw new DBAppException("There is no Clusterkey");
+		if(!flagCluster)
+			throw new DBAppException("There is no Cluster/Primary key");
+
+		String filePath = "metadata.csv";
+		//Table Name, Column Name, Column Type, ClusteringKey, IndexName,IndexType
+		//CityShop, ID, java.lang.Integer, True, IDIndex, B+tree
+		Enumeration<String> keysCSV = htblColNameType.keys();
+		Enumeration<String> elementsCSV = htblColNameType.elements();
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+			// Write header
+			while(keysCSV.hasMoreElements()) {
+				String key = keysCSV.nextElement();
+				String element= elementsCSV.nextElement();
+				if(key==strClusteringKeyColumn){
+					writer.write(strTableName + "," + key + "," + element + "," + (key==strClusteringKeyColumn?"True":"False") +"\n");
+			}	}
 
 
+			System.out.println("CSV file created successfully.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 								
 		throw new DBAppException("not implemented yet");
 	}
