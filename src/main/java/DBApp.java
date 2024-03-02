@@ -61,26 +61,18 @@ public class DBApp {
 			throw new DBAppException("There is no Cluster/Primary key");
 
 		String filePath = "metadata.csv";
-		//Table Name, Column Name, Column Type, ClusteringKey, IndexName,IndexType
-		//CityShop, ID, java.lang.Integer, True, IDIndex, B+tree
 		Enumeration<String> keysCSV = htblColNameType.keys();
 		Enumeration<String> elementsCSV = htblColNameType.elements();
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
-			// Write header
 			while(keysCSV.hasMoreElements()) {
 				String key = keysCSV.nextElement();
 				String element= elementsCSV.nextElement();
-				if(key==strClusteringKeyColumn){
-					writer.write(strTableName + "," + key + "," + element + "," + (key==strClusteringKeyColumn?"True":"False") +"\n");
-			}	}
-
-
+				writer.write(strTableName + "," + key + "," + element + "," + (key==strClusteringKeyColumn?"True":"False") + "," + "NULL" +","+ "NULL" +"\n");
+				}
 			System.out.println("CSV file created successfully.");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-								
-		throw new DBAppException("not implemented yet");
 	}
 
 
@@ -97,7 +89,10 @@ public class DBApp {
 	// htblColNameValue must include a value for the primary key
 	public void insertIntoTable(String strTableName, 
 								Hashtable<String,Object>  htblColNameValue) throws DBAppException{
-	
+		if (strTableName == null)
+			throw new DBAppException("strTableName is null");
+		if (htblColNameValue == null)
+			throw new DBAppException("htblColNameValue is null");
 		throw new DBAppException("not implemented yet");
 	}
 
