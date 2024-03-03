@@ -1,14 +1,17 @@
 
 /** * @author Wael Abouelsaadat */ 
 
+import com.opencsv.CSVReader;
+import com.opencsv.CSVWriter;
+import com.opencsv.exceptions.CsvValidationException;
+
 import java.io.*;
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.Hashtable;
+import java.util.*;
 
 
 public class DBApp {
-
+	private Vector<Table> tables;
+	private File metadata;
 
 
 	public DBApp( ){
@@ -19,11 +22,23 @@ public class DBApp {
 	// or leave it empty if there is no code you want to 
 	// execute at application startup 
 	public void init( ){
-		
-		
+		createMetadataFile();
 	}
 
+	public void createMetadataFile() {
+		metadata = new File("src/main/metadata.csv");
+		try {
+			metadata.createNewFile();
+			try (FileWriter writer = new FileWriter(metadata)) {
+				writer.write("TableName,ColumnName, ColumnType, ClusteringKey, IndexName, IndexType\n");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	// following method creates one table only
 	// strClusteringKeyColumn is the name of the column that will be the primary
 	// key and the clustering column as well. The data type of that column will
@@ -39,9 +54,10 @@ public class DBApp {
 		if(htblColNameType.get(strClusteringKeyColumn)==null){
 			throw new DBAppException("strClusteringKeyColumn not found");
 		}
-		File file = new File("src/main/TableNames/"+strTableName);
-		if(file.exists())
-			throw new DBAppException("Table Already Exists");
+		for (Table table : tables) {
+			if (table.getStrTableName().equals(strTableName))
+				throw new DBAppException("Table already exists");
+		}
 		Enumeration<String> keys = htblColNameType.keys();
 		Boolean flagCluster = false;
 		while(keys.hasMoreElements()) {
@@ -60,19 +76,22 @@ public class DBApp {
 		if(!flagCluster)
 			throw new DBAppException("There is no Cluster/Primary key");
 
-		String filePath = "metadata.csv";
+		//Putting information in metadata CSV file
 		Enumeration<String> keysCSV = htblColNameType.keys();
 		Enumeration<String> elementsCSV = htblColNameType.elements();
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+		try (FileWriter writer = new FileWriter(metadata)) {
 			while(keysCSV.hasMoreElements()) {
 				String key = keysCSV.nextElement();
-				String element= elementsCSV.nextElement();
-				writer.write(strTableName + "," + key + "," + element + "," + (key==strClusteringKeyColumn?"True":"False") + "," + "NULL" +","+ "NULL" +"\n");
-				}
-			System.out.println("CSV file created successfully.");
+				String element = elementsCSV.nextElement();
+				writer.write(strTableName + "," + key + "," + element + "," + (key == strClusteringKeyColumn ? "True" : "False") + "," + "NULL" + "," + "NULL" + "\n");
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		//Creating the table instance and adding it to the tables Vector
+		Table table = new Table(strTableName, strClusteringKeyColumn, htblColNameType);
+		tables.add(table);
 	}
 
 
@@ -80,11 +99,73 @@ public class DBApp {
 	public void createIndex(String   strTableName,
 							String   strColName,
 							String   strIndexName) throws DBAppException{
-		
+		//check if any paremeter is null
+		if (strTableName == null)
+			throw new DBAppException("strTableName is null");
+		if (strColName == null)
+			throw new DBAppException("strColName is null");
+		if (strIndexName == null)
+			throw new DBAppException("strIndexName is null");
+
+		//check if table exists
+		boolean existFlag=false;
+		for (Table table : tables) {
+            if (table.getStrTableName().equals(strTableName)) {
+                existFlag = true;
+                break;
+            }
+		}
+		if(!existFlag)
+			throw new DBAppException("Table doesn't exist");
+
+		//check if the column already has an index
+		Table table = getTableFromName(strTableName);
+		Vector<String> tableIndexedColumns = table.getIndexedColumns();
+		if(tableIndexedColumns.contains(strColName))
+			throw new DBAppException("Column is already indexed");
+
+		//Update MetadataCSV for the Index
+		updateIndexCSV(strTableName,strColName,strIndexName);
+		//Create the index
+
+		//Add the columnname that will be indexed in the indexedcolumns Vector which is in the table class
+		table.getIndexedColumns().add(strColName);
+
 		throw new DBAppException("not implemented yet");
 	}
+	public void updateIndexCSV(String strTableName,String strColName,String strIndexName){
+		try (CSVReader reader = new CSVReader(new FileReader("src/main/metadata.csv"))) {
+			String[] header = reader.readNext(); // Read the header row
+			String[] line;
+			List<String[]> modifiedLines = new ArrayList<>();
+			while ((line = reader.readNext()) != null) {
+				if (line[1].equals(strColName) && line[0].equals(strTableName)) {
+					line[4] = strIndexName;
+					line[5] = "B+Tree";
+				}
+				modifiedLines.add(line);
 
+			}
 
+			// Write the updated data back to the CSV file
+			try (CSVWriter writer = new CSVWriter(new FileWriter("src/main/metadata.csv"))) {
+				writer.writeNext(header);
+				writer.writeAll(modifiedLines);
+			}
+		} catch (IOException | CsvValidationException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public Table getTableFromName(String strTableName) throws DBAppException {
+
+		for (Table table : tables) {
+			if (table.getStrTableName().equals(strTableName)) {
+				return table;
+			}
+		}
+		throw new DBAppException("Table not found");
+	}
 	// following method inserts one row only. 
 	// htblColNameValue must include a value for the primary key
 	public void insertIntoTable(String strTableName, 
