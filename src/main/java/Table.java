@@ -6,7 +6,7 @@ public class Table implements Serializable {
     private String strTableName;
     private String strClusteringKeyColumn;
     private Hashtable<String,String> htblColNameType;
-    private Vector<String> pagesId;
+    private Vector<Integer> pagesId;
     private Vector<String> indexedColumns;
 
     public Table(String strTableName,String strClusteringKeyColumn,Hashtable<String,String> htblColNameType){
@@ -14,12 +14,14 @@ public class Table implements Serializable {
         this.strClusteringKeyColumn=strClusteringKeyColumn;
         this.htblColNameType=htblColNameType;
     }
+    public void insertRow(Hashtable<String,Object> htblColNameValue){
 
+    }
 
-    public Table loadTable(String tableName) {
+    public Table loadTable() {
         Table table = null;
         try {
-            FileInputStream fileInputStream = new FileInputStream("src/main" + tableName);
+            FileInputStream fileInputStream = new FileInputStream("src/main" + strTableName + ".class");
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             table = (Table) objectInputStream.readObject();
             fileInputStream.close();
@@ -29,11 +31,19 @@ public class Table implements Serializable {
         }
         return table;
     }
-    public void saveTable(Table table, String tableName){
+    public void unloadTable(){
+        saveTable();
+        this.strTableName=null;
+        this.strClusteringKeyColumn=null;
+        this.htblColNameType=null;
+        this.pagesId=null;
+        this.indexedColumns=null;
+    }
+    public void saveTable(){
         try{
-            FileOutputStream fileOutputStream = new FileOutputStream("src/main/" + tableName);
+            FileOutputStream fileOutputStream = new FileOutputStream("src/main/" + strTableName + ".class");
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
-            objectOutputStream.writeObject(table);
+            objectOutputStream.writeObject(this);
             objectOutputStream.close();
             fileOutputStream.close();
         }
@@ -67,11 +77,11 @@ public class Table implements Serializable {
         this.htblColNameType = htblColNameType;
     }
 
-    public Vector<String> getPagesId() {
+    public Vector<Integer> getPagesId() {
         return pagesId;
     }
 
-    public void setPagesId(Vector<String> pagesId) {
+    public void setPagesId(Vector<Integer> pagesId) {
         this.pagesId = pagesId;
     }
 

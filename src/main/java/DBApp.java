@@ -12,6 +12,7 @@ import java.util.*;
 public class DBApp {
 	private Vector<Table> tables;
 	private File metadata;
+	private int MaximumRowsCountinPage;
 
 
 	public DBApp( ){
@@ -23,6 +24,17 @@ public class DBApp {
 	// execute at application startup 
 	public void init( ){
 		createMetadataFile();
+		readConfig();
+	}
+	//Gets the MaximumRowsCountinPage from the DBApp.config
+	public void readConfig(){
+		Properties properties= new Properties();
+		try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/DBApp.config")){
+			properties.load(fileInputStream);
+			int MaximumRowsCountinPage= Integer.parseInt(properties.getProperty("MaximumRowsCountinPage"));
+		} catch (IOException i){
+			i.printStackTrace();
+		}
 	}
 
 	public void createMetadataFile() {
@@ -42,8 +54,8 @@ public class DBApp {
 	// following method creates one table only
 	// strClusteringKeyColumn is the name of the column that will be the primary
 	// key and the clustering column as well. The data type of that column will
-	// be passed in htblColNameType
-	// htblColNameValue will have the column name as key and the data 
+	// be passed in htblColNameType.
+	// htblColNameType will have the column name as key and the data
 	// type as value
 	public void createTable(String strTableName, 
 							String strClusteringKeyColumn,  
@@ -158,7 +170,6 @@ public class DBApp {
 	}
 
 	public Table getTableFromName(String strTableName) throws DBAppException {
-
 		for (Table table : tables) {
 			if (table.getStrTableName().equals(strTableName)) {
 				return table;
@@ -169,12 +180,73 @@ public class DBApp {
 	// following method inserts one row only. 
 	// htblColNameValue must include a value for the primary key
 	public void insertIntoTable(String strTableName, 
-								Hashtable<String,Object>  htblColNameValue) throws DBAppException{
+								Hashtable<String,Object>  htblColNameValue) throws DBAppException, IOException {
 		if (strTableName == null)
 			throw new DBAppException("strTableName is null");
 		if (htblColNameValue == null)
 			throw new DBAppException("htblColNameValue is null");
-		throw new DBAppException("not implemented yet");
+		//Check if the primary key has a value
+		//I tried to check but you cant put a Value in the hashtable null anyway but i will leave it just in case
+		Table table = getTableFromName(strTableName);
+		String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
+		if(htblColNameValue.get(strClusteringKeyColumn)==null)
+			throw new DBAppException("htblColNameValue doesn't include a value for the primary key");
+		//i don't know if i should check inside the hashtable for nulls/wrong column names and datatypes
+		//check if all Column names in the htblColNameValue exist
+		Enumeration<String> keys= htblColNameValue.keys();
+		Hashtable<String,String> htblColNameType=table.getHtblColNameType();
+		Enumeration<String> tableKeys = htblColNameType.keys();
+		while(keys.hasMoreElements()){
+			String key=keys.nextElement();
+			String tableKey=tableKeys.nextElement();
+			if(!(key.equals(tableKey))){
+				throw new DBAppException("Mismatch");
+			}
+		}
+		//checking for if the datatypes are correct in the htblColNameValue
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(metadata));
+			keys = htblColNameValue.keys();
+			Enumeration<Object> values = htblColNameValue.elements();
+			while (keys.hasMoreElements()) {
+				String colName = keys.nextElement();
+				Object colValue = values.nextElement();
+				String colType = table.getHtblColNameType().get(colName);
+                switch (colType) {
+                    case "java.lang.Integer" -> {
+                        if (!(colValue instanceof Integer))
+                            throw new DBAppException("The Column type and the column value doesnt match");
+                    }
+                    case "java.lang.Double" -> {
+                        if (!(colValue instanceof Double))
+                            throw new DBAppException("The Column type and the column value doesnt match");
+                    }
+                    case "java.lang.String" -> {
+                        if (!(colValue instanceof String))
+                            throw new DBAppException("The Column type and the column value doesnt match");
+                    }
+                }
+				String line = br.readLine();
+				while (line != null) {
+					String[] arrValues = line.split(",");
+					if (arrValues[0].equals(table.getStrTableName()) && arrValues[1].equals(colName)) {
+						if (!(arrValues[2].equals(colType))) {
+							throw new DBAppException("The Column type and the column value doesnt match regarding the metadata.csv file");
+						}
+						break;
+					}
+					line = br.readLine();
+				}
+
+			}
+		} catch (IOException e) {
+            e.printStackTrace();
+        }
+
+		//Insert row into table
+		table.insertRow(htblColNameValue);
+
+        throw new DBAppException("not implemented yet");
 	}
 
 
@@ -210,68 +282,68 @@ public class DBApp {
 
 	public static void main( String[] args ){
 	
-	try{
-			String strTableName = "Student";
-			DBApp	dbApp = new DBApp( );
-			
-			Hashtable htblColNameType = new Hashtable( );
-			htblColNameType.put("id", "java.lang.Integer");
-			htblColNameType.put("name", "java.lang.String");
-			htblColNameType.put("gpa", "java.lang.double");
-			dbApp.createTable( strTableName, "id", htblColNameType );
-			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
-
-			Hashtable htblColNameValue = new Hashtable( );
-			htblColNameValue.put("id", new Integer( 2343432 ));
-			htblColNameValue.put("name", new String("Ahmed Noor" ) );
-			htblColNameValue.put("gpa", new Double( 0.95 ) );
-			dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-			htblColNameValue.clear( );
-			htblColNameValue.put("id", new Integer( 453455 ));
-			htblColNameValue.put("name", new String("Ahmed Noor" ) );
-			htblColNameValue.put("gpa", new Double( 0.95 ) );
-			dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-			htblColNameValue.clear( );
-			htblColNameValue.put("id", new Integer( 5674567 ));
-			htblColNameValue.put("name", new String("Dalia Noor" ) );
-			htblColNameValue.put("gpa", new Double( 1.25 ) );
-			dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-			htblColNameValue.clear( );
-			htblColNameValue.put("id", new Integer( 23498 ));
-			htblColNameValue.put("name", new String("John Noor" ) );
-			htblColNameValue.put("gpa", new Double( 1.5 ) );
-			dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-			htblColNameValue.clear( );
-			htblColNameValue.put("id", new Integer( 78452 ));
-			htblColNameValue.put("name", new String("Zaky Noor" ) );
-			htblColNameValue.put("gpa", new Double( 0.88 ) );
-			dbApp.insertIntoTable( strTableName , htblColNameValue );
-
-
-			SQLTerm[] arrSQLTerms;
-			arrSQLTerms = new SQLTerm[2];
-			arrSQLTerms[0]._strTableName =  "Student";
-			arrSQLTerms[0]._strColumnName=  "name";
-			arrSQLTerms[0]._strOperator  =  "=";
-			arrSQLTerms[0]._objValue     =  "John Noor";
-
-			arrSQLTerms[1]._strTableName =  "Student";
-			arrSQLTerms[1]._strColumnName=  "gpa";
-			arrSQLTerms[1]._strOperator  =  "=";
-			arrSQLTerms[1]._objValue     =  new Double( 1.5 );
-
-			String[]strarrOperators = new String[1];
-			strarrOperators[0] = "OR";
-			// select * from Student where name = "John Noor" or gpa = 1.5;
-			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
-		}
-		catch(Exception exp){
-			exp.printStackTrace( );
-		}
+//	try{
+//			String strTableName = "Student";
+//			DBApp	dbApp = new DBApp( );
+//
+//			Hashtable htblColNameType = new Hashtable( );
+//			htblColNameType.put("id", "java.lang.Integer");
+//			htblColNameType.put("name", "java.lang.String");
+//			htblColNameType.put("gpa", "java.lang.double");
+//			dbApp.createTable( strTableName, "id", htblColNameType );
+//			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
+//
+//			Hashtable htblColNameValue = new Hashtable( );
+//			htblColNameValue.put("id", new Integer( 2343432 ));
+//			htblColNameValue.put("name", new String("Ahmed Noor" ) );
+//			htblColNameValue.put("gpa", new Double( 0.95 ) );
+//			dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//			htblColNameValue.clear( );
+//			htblColNameValue.put("id", new Integer( 453455 ));
+//			htblColNameValue.put("name", new String("Ahmed Noor" ) );
+//			htblColNameValue.put("gpa", new Double( 0.95 ) );
+//			dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//			htblColNameValue.clear( );
+//			htblColNameValue.put("id", new Integer( 5674567 ));
+//			htblColNameValue.put("name", new String("Dalia Noor" ) );
+//			htblColNameValue.put("gpa", new Double( 1.25 ) );
+//			dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//			htblColNameValue.clear( );
+//			htblColNameValue.put("id", new Integer( 23498 ));
+//			htblColNameValue.put("name", new String("John Noor" ) );
+//			htblColNameValue.put("gpa", new Double( 1.5 ) );
+//			dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//			htblColNameValue.clear( );
+//			htblColNameValue.put("id", new Integer( 78452 ));
+//			htblColNameValue.put("name", new String("Zaky Noor" ) );
+//			htblColNameValue.put("gpa", new Double( 0.88 ) );
+//			dbApp.insertIntoTable( strTableName , htblColNameValue );
+//
+//
+//			SQLTerm[] arrSQLTerms;
+//			arrSQLTerms = new SQLTerm[2];
+//			arrSQLTerms[0]._strTableName =  "Student";
+//			arrSQLTerms[0]._strColumnName=  "name";
+//			arrSQLTerms[0]._strOperator  =  "=";
+//			arrSQLTerms[0]._objValue     =  "John Noor";
+//
+//			arrSQLTerms[1]._strTableName =  "Student";
+//			arrSQLTerms[1]._strColumnName=  "gpa";
+//			arrSQLTerms[1]._strOperator  =  "=";
+//			arrSQLTerms[1]._objValue     =  new Double( 1.5 );
+//
+//			String[]strarrOperators = new String[1];
+//			strarrOperators[0] = "OR";
+//			// select * from Student where name = "John Noor" or gpa = 1.5;
+//			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+//		}
+//		catch(Exception exp){
+//			exp.printStackTrace( );
+//		}
 	}
 
 }
