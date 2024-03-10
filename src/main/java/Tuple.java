@@ -17,5 +17,11 @@ public class Tuple implements Serializable {
         }
         return result.toString();
     }
+    public Hashtable<String, Object> getRecord() {
+        return record;
+    }
 
+    public void setRecord(Hashtable<String, Object> record) {
+        this.record = record;
+    }
 }

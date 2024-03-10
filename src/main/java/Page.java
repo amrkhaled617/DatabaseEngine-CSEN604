@@ -8,6 +8,9 @@ public class Page implements Serializable {
     private Vector<Tuple> tuples;
     private String strTableName;
 
+    public Page(Integer pageId) {
+    }
+
     @Override
     public String toString(){
         StringBuilder result = new StringBuilder();
@@ -57,5 +60,37 @@ public class Page implements Serializable {
             i.printStackTrace();
         }
         return page;
+    }
+
+    public Integer getPageId() {
+        return pageId;
+    }
+
+    public void setPageId(Integer pageId) {
+        this.pageId = pageId;
+    }
+
+    public int getNumberOfRows() {
+        return numberOfRows;
+    }
+
+    public void setNumberOfRows(int numberOfRows) {
+        this.numberOfRows = numberOfRows;
+    }
+
+    public Vector<Tuple> getTuples() {
+        return tuples;
+    }
+
+    public void setTuples(Vector<Tuple> tuples) {
+        this.tuples = tuples;
+    }
+
+    public String getStrTableName() {
+        return strTableName;
+    }
+
+    public void setStrTableName(String strTableName) {
+        this.strTableName = strTableName;
     }
 }

@@ -196,11 +196,11 @@ public class DBApp {
 		Enumeration<String> keys= htblColNameValue.keys();
 		Hashtable<String,String> htblColNameType=table.getHtblColNameType();
 		Enumeration<String> tableKeys = htblColNameType.keys();
-		while(keys.hasMoreElements()){
+		while(keys.hasMoreElements() && tableKeys.hasMoreElements()){
 			String key=keys.nextElement();
 			String tableKey=tableKeys.nextElement();
 			if(!(key.equals(tableKey))){
-				throw new DBAppException("Mismatch");
+				throw new DBAppException("Name Mismatch");
 			}
 		}
 		//checking for if the datatypes are correct in the htblColNameValue
