@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.DuplicateFormatFlagsException;
 import java.util.Hashtable;
 import java.util.Vector;
 
@@ -10,6 +11,53 @@ public class Page implements Serializable {
 
     public Page(Integer pageId) {
     }
+    public void insertRowInPage(Hashtable<String,Object> htblColNameValue, String strClusteringKeyColumn) throws DBAppException {
+        int lowTupleIndex = 0;
+        int highTupleIndex = tuples.size() - 1;
+        Object clusteringKeyVal = htblColNameValue.get(strClusteringKeyColumn);
+        while(lowTupleIndex >= highTupleIndex) {
+            int mid = lowTupleIndex + (highTupleIndex - lowTupleIndex) / 2;
+            Object midElement = tuples.get(mid).getRecord().get(strClusteringKeyColumn);
+            if (clusteringKeyVal instanceof String) {
+                String castedClusteringKeyVal = (String) clusteringKeyVal;
+                String castedmidElement = (String) midElement;
+                int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
+                if (comparisonResult == 1){
+                    highTupleIndex=mid-1;
+                }else if(comparisonResult == 0){
+                    //Duplicate
+                }else if(comparisonResult == -1){
+                    lowTupleIndex=mid+1;
+                }
+            } else if (clusteringKeyVal instanceof Integer) {
+                Integer castedClusteringKeyVal = (Integer) clusteringKeyVal;
+                Integer castedmidElement = (Integer) midElement;
+                int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
+                if (comparisonResult == 1){
+                    highTupleIndex = mid-1;
+                }else if(comparisonResult == 0){
+                    //Duplicate
+                }else if(comparisonResult == -1){
+                    lowTupleIndex = mid+1;
+                }
+            } else if (clusteringKeyVal instanceof Double) {
+                Double castedClusteringKeyVal = (Double) clusteringKeyVal;
+                Double castedmidElement = (Double) midElement;
+                int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
+                if (comparisonResult == 1){
+                    highTupleIndex = mid-1;
+                }else if(comparisonResult == 0){
+                    //Duplicate
+                }else if(comparisonResult == -1){
+                    lowTupleIndex = mid+1;
+                }
+            } else {
+                throw new DBAppException("clusteringKeyVal has a invalid Datatype");
+            }
+        }
+    }
+
+
 
     @Override
     public String toString(){

@@ -21,7 +21,7 @@ public class Table implements Serializable {
         Page pageToInsertInto = findPageByBinarySearch(clusteringKeyVal);
         //load the page
         //insert the row in the page
-
+        pageToInsertInto.insertRowInPage(htblColNameValue,strClusteringKeyColumn);
         //update indices(idk what this means lesa)
 
     }
@@ -37,7 +37,7 @@ public class Table implements Serializable {
         int lowPageId=0;
         int highPageId=pagesId.size()-1;
         while(lowPageId <= highPageId){//lesa hzbt el condition dah
-            int mid=lowPageId +(highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
+            int mid= lowPageId + (highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
             Integer pageIdToGet = pagesId.get(mid);//the mid pageId
             Page pageToCheck = getPageById(pageIdToGet);//the actual mid Page
             Object firstClusteringKeyVal = pageToCheck.getTuples().firstElement().getRecord().get(strClusteringKeyColumn);//Gets the first Value of the Clustering key in the page
