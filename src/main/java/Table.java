@@ -8,7 +8,7 @@ public class Table implements Serializable {
     private String strClusteringKeyColumn;
     private Hashtable<String,String> htblColNameType;
     private Vector<Integer> pagesId;
-    private Vector<String> indexedColumns;
+    private Vector<String> indexedColumns = new Vector<String>();
 
     public Table(String strTableName,String strClusteringKeyColumn,Hashtable<String,String> htblColNameType){
         this.strTableName=strTableName;

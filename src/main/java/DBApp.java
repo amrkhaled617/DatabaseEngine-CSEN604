@@ -10,9 +10,9 @@ import java.util.*;
 
 
 public class DBApp {
-	private Vector<Table> tables;
+	private Vector<Table> tables = new Vector<Table>();
 	private File metadata;
-	private int MaximumRowsCountinPage;
+	private int maximumRowsCountinPage;
 
 
 	public DBApp( ){
@@ -31,7 +31,7 @@ public class DBApp {
 		Properties properties= new Properties();
 		try (FileInputStream fileInputStream = new FileInputStream("src/main/resources/DBApp.config")){
 			properties.load(fileInputStream);
-			int MaximumRowsCountinPage= Integer.parseInt(properties.getProperty("MaximumRowsCountinPage"));
+			maximumRowsCountinPage= Integer.parseInt(properties.getProperty("MaximumRowsCountinPage"));
 		} catch (IOException i){
 			i.printStackTrace();
 		}
@@ -42,7 +42,7 @@ public class DBApp {
 		try {
 			metadata.createNewFile();
 			try (FileWriter writer = new FileWriter(metadata)) {
-				writer.write("TableName,ColumnName, ColumnType, ClusteringKey, IndexName, IndexType\n");
+				writer.write("TableName,ColumnName, ColumnType, ClusteringKey, IndexName, IndexType " + "\n");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -91,7 +91,7 @@ public class DBApp {
 		//Putting information in metadata CSV file
 		Enumeration<String> keysCSV = htblColNameType.keys();
 		Enumeration<String> elementsCSV = htblColNameType.elements();
-		try (FileWriter writer = new FileWriter(metadata)) {
+		try (FileWriter writer = new FileWriter(metadata,true)) {
 			while(keysCSV.hasMoreElements()) {
 				String key = keysCSV.nextElement();
 				String element = elementsCSV.nextElement();
@@ -143,7 +143,7 @@ public class DBApp {
 		//Add the columnname that will be indexed in the indexedcolumns Vector which is in the table class
 		table.getIndexedColumns().add(strColName);
 
-		throw new DBAppException("not implemented yet");
+//		throw new DBAppException("not implemented yet");
 	}
 	public void updateIndexCSV(String strTableName,String strColName,String strIndexName){
 		try (CSVReader reader = new CSVReader(new FileReader("src/main/metadata.csv"))) {
@@ -282,16 +282,16 @@ public class DBApp {
 
 	public static void main( String[] args ){
 	
-//	try{
-//			String strTableName = "Student";
-//			DBApp	dbApp = new DBApp( );
-//
-//			Hashtable htblColNameType = new Hashtable( );
-//			htblColNameType.put("id", "java.lang.Integer");
-//			htblColNameType.put("name", "java.lang.String");
-//			htblColNameType.put("gpa", "java.lang.double");
-//			dbApp.createTable( strTableName, "id", htblColNameType );
-//			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
+	try{
+			String strTableName = "Student";
+			DBApp	dbApp = new DBApp( );
+			dbApp.init();
+			Hashtable htblColNameType = new Hashtable( );
+			htblColNameType.put("id", "java.lang.Integer");
+			htblColNameType.put("name", "java.lang.String");
+			htblColNameType.put("gpa", "java.lang.Double");
+			dbApp.createTable( strTableName, "id", htblColNameType );
+			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 //
 //			Hashtable htblColNameValue = new Hashtable( );
 //			htblColNameValue.put("id", new Integer( 2343432 ));
@@ -340,10 +340,10 @@ public class DBApp {
 //			strarrOperators[0] = "OR";
 //			// select * from Student where name = "John Noor" or gpa = 1.5;
 //			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
-//		}
-//		catch(Exception exp){
-//			exp.printStackTrace( );
-//		}
+		}
+		catch(Exception exp){
+			exp.printStackTrace( );
+		}
 	}
 
 }
