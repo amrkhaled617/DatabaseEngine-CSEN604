@@ -254,10 +254,15 @@ public class DBApp {
 	// htblColNameValue holds the key and new value 
 	// htblColNameValue will not include clustering key as column name
 	// strClusteringKeyValue is the value to look for to find the row to update.
-	public void updateTable(String strTableName, 
-							String strClusteringKeyValue,
+	public void updateTable(String strTableName, String strClusteringKeyValue, //howa el value 3alatool String wala eh dah
 							Hashtable<String,Object> htblColNameValue   )  throws DBAppException{
-	
+		Table table = getTableFromName(strTableName);
+		Page page= table.findPageByBinarySearch(strClusteringKeyValue);
+		String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
+
+		page.updateRowInPage(strClusteringKeyValue,strClusteringKeyColumn,htblColNameValue);
+
+
 		throw new DBAppException("not implemented yet");
 	}
 
@@ -268,30 +273,67 @@ public class DBApp {
 	// htblColNameValue enteries are ANDED together
 	public void deleteFromTable(String strTableName, 
 								Hashtable<String,Object> htblColNameValue) throws DBAppException{
-	
+
 		throw new DBAppException("not implemented yet");
 	}
 
 
 	public Iterator selectFromTable(SQLTerm[] arrSQLTerms, 
 									String[]  strarrOperators) throws DBAppException{
-										
+		checkSelectFromTableParameters(arrSQLTerms,strarrOperators);
 		return null;
+	}
+	public void checkSelectFromTableParameters(SQLTerm[] arrSQLTerms,
+											   String[]  strarrOperators) throws DBAppException {
+		if (arrSQLTerms == null)
+			throw new DBAppException("SQLTerms is null");
+		if (strarrOperators == null)
+			throw new DBAppException("Operators is null");
+		if (arrSQLTerms.length == 0)
+			throw new DBAppException("SQLTerms is empty");
+		if (strarrOperators.length != arrSQLTerms.length - 1)
+			throw new DBAppException("Operator amount doesn't match SQLTerm amount");
+		for (String operator : strarrOperators) {
+			if (operator != "AND" && operator != "OR" && operator != "XOR")
+				throw new DBAppException("Invalid operator");
+		}
+		for (int i = 0; i < arrSQLTerms.length; i++) {
+
+			SQLTerm sqlTerm = arrSQLTerms[i];
+
+			if (sqlTerm._strTableName == null) {
+				throw new DBAppException("Table name is null");
+			}
+			if (sqlTerm._strColumnName == null) {
+				throw new DBAppException("Column name is null");
+			}
+			if (sqlTerm._objValue == null) {
+				throw new DBAppException("Value is null");
+			}
+			if (sqlTerm._strOperator == null) {
+				throw new DBAppException("Operator is null");
+			}
+
+			if (sqlTerm._strOperator != "=" && sqlTerm._strOperator != "<" && sqlTerm._strOperator != ">"
+					&& sqlTerm._strOperator != "<=" && sqlTerm._strOperator != ">=" && sqlTerm._strOperator != "!=") {
+				throw new DBAppException("Invalid operator");
+			}
+		}
 	}
 
 
 	public static void main( String[] args ){
 	
 	try{
-			String strTableName = "Student";
-			DBApp	dbApp = new DBApp( );
-			dbApp.init();
-			Hashtable htblColNameType = new Hashtable( );
-			htblColNameType.put("id", "java.lang.Integer");
-			htblColNameType.put("name", "java.lang.String");
-			htblColNameType.put("gpa", "java.lang.Double");
-			dbApp.createTable( strTableName, "id", htblColNameType );
-			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
+//			String strTableName = "Student";
+//			DBApp	dbApp = new DBApp( );
+//			dbApp.init();
+//			Hashtable htblColNameType = new Hashtable( );
+//			htblColNameType.put("id", "java.lang.Integer");
+//			htblColNameType.put("name", "java.lang.String");
+//			htblColNameType.put("gpa", "java.lang.Double");
+//			dbApp.createTable( strTableName, "id", htblColNameType );
+//			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
 //
 //			Hashtable htblColNameValue = new Hashtable( );
 //			htblColNameValue.put("id", new Integer( 2343432 ));
@@ -324,22 +366,25 @@ public class DBApp {
 //			dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
 //
-//			SQLTerm[] arrSQLTerms;
-//			arrSQLTerms = new SQLTerm[2];
-//			arrSQLTerms[0]._strTableName =  "Student";
-//			arrSQLTerms[0]._strColumnName=  "name";
-//			arrSQLTerms[0]._strOperator  =  "=";
-//			arrSQLTerms[0]._objValue     =  "John Noor";
-//
-//			arrSQLTerms[1]._strTableName =  "Student";
-//			arrSQLTerms[1]._strColumnName=  "gpa";
-//			arrSQLTerms[1]._strOperator  =  "=";
-//			arrSQLTerms[1]._objValue     =  new Double( 1.5 );
-//
-//			String[]strarrOperators = new String[1];
-//			strarrOperators[0] = "OR";
-//			// select * from Student where name = "John Noor" or gpa = 1.5;
-//			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+			DBApp dbApp = new DBApp();
+			SQLTerm[] arrSQLTerms;
+			arrSQLTerms = new SQLTerm[2];
+			arrSQLTerms[0]=new SQLTerm();
+			arrSQLTerms[1]=new SQLTerm();
+			arrSQLTerms[0]._strTableName =  "Student";
+			arrSQLTerms[0]._strColumnName=  "name";
+			arrSQLTerms[0]._strOperator  =  "=";
+			arrSQLTerms[0]._objValue     =  "John Noor";
+
+			arrSQLTerms[1]._strTableName =  "Student";
+			arrSQLTerms[1]._strColumnName=  "gpa";
+			arrSQLTerms[1]._strOperator  =  "=";
+			arrSQLTerms[1]._objValue     =   1.5 ;
+
+			String[]strarrOperators = new String[1];
+			strarrOperators[0] = "OR";
+			// select * from Student where name = "John Noor" or gpa = 1.5;
+			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
 		}
 		catch(Exception exp){
 			exp.printStackTrace( );
