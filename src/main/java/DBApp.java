@@ -291,9 +291,16 @@ public class DBApp {
 		table.loadTable();
 		Vector<Tuple> tuples = new Vector<Tuple>();
 		for (int i = 0; i < arrSQLTerms.length; i++) {
-			tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
+			if(strarrOperators.length == 0){
+				tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
+			}else if(strarrOperators[0] == "AND") {
+
+			}else if(strarrOperators[0] =="OR"){
+				tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
+			}
+
 		}
-		Iterator iteratorTuples=tuples.iterator();
+		Iterator iteratorTuples = tuples.iterator();
 		table.unloadTable();
 		return iteratorTuples;
 	}
