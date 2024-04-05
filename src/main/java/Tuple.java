@@ -4,6 +4,10 @@ import java.util.Hashtable;
 public class Tuple implements Serializable {
     private Hashtable<String,Object> record;
 
+    public Tuple(Hashtable<String,Object> record){
+        this.record=record;
+    }
+
     @Override
     public String toString(){
         StringBuilder result = new StringBuilder();

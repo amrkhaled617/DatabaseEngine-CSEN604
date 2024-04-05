@@ -10,6 +10,7 @@ public class Page implements Serializable {
     private String strTableName;
 
     public Page(Integer pageId) {
+        this.pageId=pageId;
     }
     public void insertRowInPage(Hashtable<String,Object> htblColNameValue, String strClusteringKeyColumn) throws DBAppException {
         int lowTupleIndex = 0;
@@ -100,6 +101,55 @@ public class Page implements Serializable {
             }
         }
     }
+    public void populateTreePage(bplustree bPlusTree,String strColName){
+        for( Tuple tuple : tuples){
+            Hashtable<String,Object> record = tuple.getRecord();
+            Comparable key = (Comparable) record.get(strColName);
+            bPlusTree.insert(key,strTableName+pageId+".class");
+        }
+    }
+    public Vector<Tuple> getRowsFromSQLTerm(SQLTerm sqlTerm) {
+        Vector<Tuple> result = new Vector<Tuple>();
+        String strColumnName = sqlTerm._strColumnName;
+        Object objValue = sqlTerm._objValue;
+        String strOperator = sqlTerm._strOperator;
+        for (int i = 0; i < tuples.size(); i++) {
+            Hashtable<String, Object> row = tuples.get(i).getRecord();
+            if (strOperator.equals("=")) {
+                if (row.get(strColumnName).equals(objValue)) {
+                    Tuple tuple = new Tuple(row);
+                    result.add(tuple);
+                }
+            } else if (strOperator.equals("!=")) {
+                if (!row.get(strColumnName).equals(objValue)) {
+                    Tuple tuple = new Tuple(row);
+                    result.add(tuple);
+                }
+            } else if (strOperator.equals(">")) {
+                if (((Comparable) row.get(strColumnName)).compareTo(objValue) > 0) {
+                    Tuple tuple = new Tuple(row);
+                    result.add(tuple);
+                }
+            } else if (strOperator.equals(">=")) {
+                if (((Comparable) row.get(strColumnName)).compareTo(objValue) >= 0) {
+                    Tuple tuple = new Tuple(row);
+                    result.add(tuple);
+                }
+            } else if (strOperator.equals("<")) {
+                if (((Comparable) row.get(strColumnName)).compareTo(objValue) < 0) {
+                    Tuple tuple = new Tuple(row);
+                    result.add(tuple);
+                }
+            } else if (strOperator.equals("<=")) {
+                if (((Comparable) row.get(strColumnName)).compareTo(objValue) <= 0) {
+                    Tuple tuple = new Tuple(row);
+                    result.add(tuple);
+                }
+            }
+        }
+        return result;
+    }
+
 
 
 

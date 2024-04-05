@@ -139,7 +139,13 @@ public class DBApp {
 		//Update MetadataCSV for the Index
 		updateIndexCSV(strTableName,strColName,strIndexName);
 		//Create the index
-
+		String colNameDataType = table.getHtblColNameType().get(strColName);
+		if(colNameDataType == "java.lang.Integer" || colNameDataType == "java.lang.String" || colNameDataType == "java.lang.Double"){
+			bplustree bPlusTree = new bplustree(128);
+			table.populateTree(bPlusTree,strColName);
+		}else{
+			throw new DBAppException("colNameDataType is not integer/string/double");
+		}
 		//Add the columnname that will be indexed in the indexedcolumns Vector which is in the table class
 		table.getIndexedColumns().add(strColName);
 
@@ -281,7 +287,15 @@ public class DBApp {
 	public Iterator selectFromTable(SQLTerm[] arrSQLTerms, 
 									String[]  strarrOperators) throws DBAppException{
 		checkSelectFromTableParameters(arrSQLTerms,strarrOperators);
-		return null;
+		Table table = getTableFromName(arrSQLTerms[0]._strTableName);
+		table.loadTable();
+		Vector<Tuple> tuples = new Vector<Tuple>();
+		for (int i = 0; i < arrSQLTerms.length; i++) {
+			tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
+		}
+		Iterator iteratorTuples=tuples.iterator();
+		table.unloadTable();
+		return iteratorTuples;
 	}
 	public void checkSelectFromTableParameters(SQLTerm[] arrSQLTerms,
 											   String[]  strarrOperators) throws DBAppException {

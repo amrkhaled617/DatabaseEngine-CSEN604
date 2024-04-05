@@ -4,10 +4,11 @@ import java.util.Hashtable;
 import java.util.Vector;
 
 public class Table implements Serializable {
+    private Vector<Integer> pagesId;
     private String strTableName;
     private String strClusteringKeyColumn;
     private Hashtable<String,String> htblColNameType;
-    private Vector<Integer> pagesId;
+
     private Vector<String> indexedColumns = new Vector<String>();
 
     public Table(String strTableName,String strClusteringKeyColumn,Hashtable<String,String> htblColNameType){
@@ -25,6 +26,23 @@ public class Table implements Serializable {
         //update indices(idk what this means lesa)
 
     }
+    public void populateTree(bplustree bPlusTree,String strColName){
+        for (int pageId : pagesId){
+            Page page = getPageById(pageId);
+            page.populateTreePage(bPlusTree,strColName);
+        }
+    }
+    public Vector<Tuple> getRowsFromSQLTerm(SQLTerm sqlTerm) throws DBAppException {
+        Vector<Tuple> rows = new Vector<Tuple>();
+
+        for (int pageId : pagesId) {
+            Page page = getPageById(pageId);
+            Vector<Tuple> pageRows = page.getRowsFromSQLTerm(sqlTerm);
+            rows.addAll(pageRows);
+        }
+        return rows;
+    }
+
     public Page getPageById(Integer pageId){
         Page page = new Page(pageId);
         page.loadPage();
