@@ -3,20 +3,22 @@ import java.util.DuplicateFormatFlagsException;
 import java.util.Hashtable;
 import java.util.Vector;
 
+
 public class Page implements Serializable {
     private Integer pageId;
     private int numberOfRows;
-    private Vector<Tuple> tuples;
+    private Vector<Tuple> tuples = new Vector<Tuple>();
     private String strTableName;
 
-    public Page(Integer pageId) {
+    public Page(Integer pageId, String strTableName) {
         this.pageId=pageId;
+        this.strTableName=strTableName;
     }
     public void insertRowInPage(Hashtable<String,Object> htblColNameValue, String strClusteringKeyColumn) throws DBAppException {
         int lowTupleIndex = 0;
         int highTupleIndex = tuples.size() - 1;
         Object clusteringKeyVal = htblColNameValue.get(strClusteringKeyColumn);
-        while(lowTupleIndex >= highTupleIndex) {
+        while(lowTupleIndex > highTupleIndex) {
             int mid = lowTupleIndex + (highTupleIndex - lowTupleIndex) / 2;
             Object midElement = tuples.get(mid).getRecord().get(strClusteringKeyColumn);
             if (clusteringKeyVal instanceof String) {
@@ -55,7 +57,36 @@ public class Page implements Serializable {
             } else {
                 throw new DBAppException("clusteringKeyVal has a invalid Datatype");
             }
+
         }
+        //now u have exited the while loop --> lowtupleindex = highindex
+        //CHECK IF PAGE IS FULL
+        int MaximumRowsCountinPage = DBApp.getMaximumRowsCountinPage();
+        if(numberOfRows==MaximumRowsCountinPage){
+            Tuple t= new Tuple(tuples.lastElement().getRecord());
+            tuples.remove(tuples.size() - 1);
+            File file = new File("src/main/" + strTableName + pageId+1 + ".class");
+            if(!file.exists()){
+                Page page= new Page(pageId+1,strTableName);
+                page.savePage();
+                page.insertRowInPage(t.getRecord(),strClusteringKeyColumn);
+            }
+        }
+        int mid = lowTupleIndex;
+        Comparable midElement = (Comparable) tuples.get(mid).getRecord().get(strClusteringKeyColumn);
+        if(midElement.compareTo(clusteringKeyVal)==1){
+            Tuple tuple=new Tuple(htblColNameValue);
+            tuples.add(mid,tuple);
+            numberOfRows++;
+            this.savePage();
+        }
+        else {
+            Tuple tuple=new Tuple(htblColNameValue);
+            tuples.add(mid+1,tuple);
+            numberOfRows++;
+        }
+        //Insert Input tuple to your page:
+
     }
     public void updateRowInPage(Object clusteringKeyVal,String strClusteringKeyColumn,Hashtable<String,Object> htblColNameValue) throws DBAppException {
         int lowTupleIndex = 0;
@@ -169,7 +200,7 @@ public class Page implements Serializable {
         return result.toString();
     }
     public void savePage(){
-        File file = new File(strTableName+pageId+".class");
+        File file = new File("src/main/" + strTableName+pageId+".class");
         try {
             FileOutputStream fileOutputStream = new FileOutputStream(file);
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
@@ -191,10 +222,10 @@ public class Page implements Serializable {
         this.strTableName=null;
         this.pageId=0;
     }
-    public Page loadPage(){
+    public static Page loadPage(String strTableName , int pageId){
         Page page = null;
         try {
-            FileInputStream fileInputStream = new FileInputStream(strTableName + pageId + ".class");
+            FileInputStream fileInputStream = new FileInputStream("src/main/" +strTableName + pageId + ".class");
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             page = (Page) objectInputStream.readObject();
             fileInputStream.close();

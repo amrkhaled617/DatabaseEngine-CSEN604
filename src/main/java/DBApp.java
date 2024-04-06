@@ -12,7 +12,7 @@ import java.util.*;
 public class DBApp {
 	private Vector<Table> tables = new Vector<Table>();
 	private File metadata;
-	private int maximumRowsCountinPage;
+	private static int maximumRowsCountinPage;
 
 
 	public DBApp( ){
@@ -104,6 +104,7 @@ public class DBApp {
 		//Creating the table instance and adding it to the tables Vector
 		Table table = new Table(strTableName, strClusteringKeyColumn, htblColNameType);
 		tables.add(table);
+		table.saveTable();
 	}
 
 
@@ -131,7 +132,7 @@ public class DBApp {
 			throw new DBAppException("Table doesn't exist");
 
 		//check if the column already has an index
-		Table table = getTableFromName(strTableName);
+		Table table = Table.loadTable(strTableName);
 		Vector<String> tableIndexedColumns = table.getIndexedColumns();
 		if(tableIndexedColumns.contains(strColName))
 			throw new DBAppException("Column is already indexed");
@@ -174,15 +175,15 @@ public class DBApp {
 			throw new RuntimeException(e);
 		}
 	}
-
-	public Table getTableFromName(String strTableName) throws DBAppException {
-		for (Table table : tables) {
-			if (table.getStrTableName().equals(strTableName)) {
-				return table;
-			}
-		}
-		throw new DBAppException("Table not found");
-	}
+//check with files
+//	public Table getTableFromName(String strTableName) throws DBAppException {
+//		for (Table table : tables) {
+//			if (table.getStrTableName().equals(strTableName)) {
+//				return table;
+//			}
+//		}
+//		throw new DBAppException("Table not found");
+//	}
 	// following method inserts one row only. 
 	// htblColNameValue must include a value for the primary key
 	public void insertIntoTable(String strTableName, 
@@ -193,7 +194,7 @@ public class DBApp {
 			throw new DBAppException("htblColNameValue is null");
 		//Check if the primary key has a value
 		//I tried to check but you cant put a Value in the hashtable null anyway but i will leave it just in case
-		Table table = getTableFromName(strTableName);
+		Table table = Table.loadTable(strTableName);
 		String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
 		if(htblColNameValue.get(strClusteringKeyColumn)==null)
 			throw new DBAppException("htblColNameValue doesn't include a value for the primary key");
@@ -202,13 +203,13 @@ public class DBApp {
 		Enumeration<String> keys= htblColNameValue.keys();
 		Hashtable<String,String> htblColNameType=table.getHtblColNameType();
 		Enumeration<String> tableKeys = htblColNameType.keys();
-		while(keys.hasMoreElements() && tableKeys.hasMoreElements()){
-			String key=keys.nextElement();
-			String tableKey=tableKeys.nextElement();
-			if(!(key.equals(tableKey))){
-				throw new DBAppException("Name Mismatch");
-			}
-		}
+//		while(keys.hasMoreElements() && tableKeys.hasMoreElements()){
+//			String key=keys.nextElement();
+//			String tableKey=tableKeys.nextElement();
+//			if(!(key.equals(tableKey))){
+//				throw new DBAppException("Name Mismatch");
+//			}
+//		}
 		//checking for if the datatypes are correct in the htblColNameValue
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(metadata));
@@ -250,9 +251,24 @@ public class DBApp {
         }
 
 		//Insert row into table
-		table.insertRow(htblColNameValue);
+		if(table.getNumOfPages()==0){
+			int newNumOfPages = table.getNumOfPages()+1;
+			table.setNumOfPages(newNumOfPages);
+			table.getPagesId().add(newNumOfPages);
+			Page page = new Page(newNumOfPages,strTableName);
+			Tuple tuple = new Tuple(htblColNameValue);
+			page.getTuples().add(tuple);
+			page.savePage();
+			table.saveTable();
 
-        throw new DBAppException("not implemented yet");
+		}else {
+			table.insertRow(htblColNameValue);
+		}
+		Page page = Page.loadPage(strTableName,1);
+//		System.out.println(page.getTuples().get(0).getRecord().toString());
+//		System.out.println(page.getTuples().get(1).getRecord().toString());
+
+//        throw new DBAppException("not implemented yet");
 	}
 
 
@@ -262,7 +278,7 @@ public class DBApp {
 	// strClusteringKeyValue is the value to look for to find the row to update.
 	public void updateTable(String strTableName, String strClusteringKeyValue, //howa el value 3alatool String wala eh dah
 							Hashtable<String,Object> htblColNameValue   )  throws DBAppException{
-		Table table = getTableFromName(strTableName);
+		Table table = Table.loadTable(strTableName);
 		Page page= table.findPageByBinarySearch(strClusteringKeyValue);
 		String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
 
@@ -287,8 +303,7 @@ public class DBApp {
 	public Iterator selectFromTable(SQLTerm[] arrSQLTerms, 
 									String[]  strarrOperators) throws DBAppException{
 		checkSelectFromTableParameters(arrSQLTerms,strarrOperators);
-		Table table = getTableFromName(arrSQLTerms[0]._strTableName);
-		table.loadTable();
+		Table table = Table.loadTable(arrSQLTerms[0]._strTableName);
 		Vector<Tuple> tuples = new Vector<Tuple>();
 		for (int i = 0; i < arrSQLTerms.length; i++) {
 			if(strarrOperators.length == 0){
@@ -341,27 +356,43 @@ public class DBApp {
 			}
 		}
 	}
+	public void printPage(){
+		Page page =Page.loadPage("Student" , 1);
+		System.out.println(page.getTuples().get(0).getRecord().toString());
+		System.out.println(page.getTuples().get(1).getRecord().toString());
+		System.out.println(page.getTuples().get(2).getRecord().toString());
+
+	}
 
 
-	public static void main( String[] args ){
+	public static int getMaximumRowsCountinPage() {
+		return maximumRowsCountinPage;
+	}
+
+	public void setMaximumRowsCountinPage(int maximumRowsCountinPage) {
+		this.maximumRowsCountinPage = maximumRowsCountinPage;
+	}
+
+	public static void main(String[] args ){
 	
 	try{
-//			String strTableName = "Student";
-//			DBApp	dbApp = new DBApp( );
-//			dbApp.init();
+			String strTableName = "Student";
+			DBApp	dbApp = new DBApp( );
+			dbApp.init();
 //			Hashtable htblColNameType = new Hashtable( );
 //			htblColNameType.put("id", "java.lang.Integer");
 //			htblColNameType.put("name", "java.lang.String");
 //			htblColNameType.put("gpa", "java.lang.Double");
 //			dbApp.createTable( strTableName, "id", htblColNameType );
 //			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
-//
-//			Hashtable htblColNameValue = new Hashtable( );
+
+			Hashtable htblColNameValue = new Hashtable( );
 //			htblColNameValue.put("id", new Integer( 2343432 ));
 //			htblColNameValue.put("name", new String("Ahmed Noor" ) );
 //			htblColNameValue.put("gpa", new Double( 0.95 ) );
 //			dbApp.insertIntoTable( strTableName , htblColNameValue );
-//
+
+
 //			htblColNameValue.clear( );
 //			htblColNameValue.put("id", new Integer( 453455 ));
 //			htblColNameValue.put("name", new String("Ahmed Noor" ) );
@@ -373,12 +404,14 @@ public class DBApp {
 //			htblColNameValue.put("name", new String("Dalia Noor" ) );
 //			htblColNameValue.put("gpa", new Double( 1.25 ) );
 //			dbApp.insertIntoTable( strTableName , htblColNameValue );
+
 //
 //			htblColNameValue.clear( );
-//			htblColNameValue.put("id", new Integer( 23498 ));
+//			htblColNameValue.put("id", new Integer(453456  ));
 //			htblColNameValue.put("name", new String("John Noor" ) );
 //			htblColNameValue.put("gpa", new Double( 1.5 ) );
 //			dbApp.insertIntoTable( strTableName , htblColNameValue );
+//		dbApp.printPage();
 //
 //			htblColNameValue.clear( );
 //			htblColNameValue.put("id", new Integer( 78452 ));
@@ -387,25 +420,25 @@ public class DBApp {
 //			dbApp.insertIntoTable( strTableName , htblColNameValue );
 //
 //
-			DBApp dbApp = new DBApp();
-			SQLTerm[] arrSQLTerms;
-			arrSQLTerms = new SQLTerm[2];
-			arrSQLTerms[0]=new SQLTerm();
-			arrSQLTerms[1]=new SQLTerm();
-			arrSQLTerms[0]._strTableName =  "Student";
-			arrSQLTerms[0]._strColumnName=  "name";
-			arrSQLTerms[0]._strOperator  =  "=";
-			arrSQLTerms[0]._objValue     =  "John Noor";
-
-			arrSQLTerms[1]._strTableName =  "Student";
-			arrSQLTerms[1]._strColumnName=  "gpa";
-			arrSQLTerms[1]._strOperator  =  "=";
-			arrSQLTerms[1]._objValue     =   1.5 ;
-
-			String[]strarrOperators = new String[1];
-			strarrOperators[0] = "OR";
-			// select * from Student where name = "John Noor" or gpa = 1.5;
-			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+//			DBApp dbApp = new DBApp();
+//			SQLTerm[] arrSQLTerms;
+//			arrSQLTerms = new SQLTerm[2];
+//			arrSQLTerms[0]=new SQLTerm();
+//			arrSQLTerms[1]=new SQLTerm();
+//			arrSQLTerms[0]._strTableName =  "Student";
+//			arrSQLTerms[0]._strColumnName=  "name";
+//			arrSQLTerms[0]._strOperator  =  "=";
+//			arrSQLTerms[0]._objValue     =  "John Noor";
+//
+//			arrSQLTerms[1]._strTableName =  "Student";
+//			arrSQLTerms[1]._strColumnName=  "gpa";
+//			arrSQLTerms[1]._strOperator  =  "=";
+//			arrSQLTerms[1]._objValue     =   1.5 ;
+//
+//			String[]strarrOperators = new String[1];
+//			strarrOperators[0] = "OR";
+//			// select * from Student where name = "John Noor" or gpa = 1.5;
+//			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
 		}
 		catch(Exception exp){
 			exp.printStackTrace( );

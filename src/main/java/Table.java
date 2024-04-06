@@ -4,10 +4,11 @@ import java.util.Hashtable;
 import java.util.Vector;
 
 public class Table implements Serializable {
-    private Vector<Integer> pagesId;
+    private Vector<Integer> pagesId= new Vector<Integer>();
     private String strTableName;
     private String strClusteringKeyColumn;
     private Hashtable<String,String> htblColNameType;
+    private int numOfPages;
 
     private Vector<String> indexedColumns = new Vector<String>();
 
@@ -27,8 +28,9 @@ public class Table implements Serializable {
 
     }
     public void populateTree(bplustree bPlusTree,String strColName){
+
         for (int pageId : pagesId){
-            Page page = getPageById(pageId);
+            Page page = Page.loadPage(strTableName,pageId);
             page.populateTreePage(bPlusTree,strColName);
         }
     }
@@ -36,28 +38,30 @@ public class Table implements Serializable {
         Vector<Tuple> rows = new Vector<Tuple>();
 
         for (int pageId : pagesId) {
-            Page page = getPageById(pageId);
+            Page page = Page.loadPage(strTableName,pageId);
             Vector<Tuple> pageRows = page.getRowsFromSQLTerm(sqlTerm);
             rows.addAll(pageRows);
         }
         return rows;
     }
 
-    public Page getPageById(Integer pageId){
-        Page page = new Page(pageId);
-        page.loadPage();
-        return page;
-    }
+
 
 
     public Page findPageByBinarySearch(Object clusteringKeyVal) throws DBAppException {
-        Collections.sort(pagesId);
+  //      Collections.sort(pagesId);
+//        if(numOfPages==0){
+//            pagesId.add(++numOfPages);
+//            Page page = new Page(numOfPages) ;
+//            page.getTuples().add()
+//        }
+//        System.out.print(pagesId.toString());
         int lowPageId=0;
         int highPageId=pagesId.size()-1;
         while(lowPageId <= highPageId){//lesa hzbt el condition dah
             int mid= lowPageId + (highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
             Integer pageIdToGet = pagesId.get(mid);//the mid pageId
-            Page pageToCheck = getPageById(pageIdToGet);//the actual mid Page
+            Page pageToCheck = Page.loadPage(strTableName,pageIdToGet);//the actual mid Page
             Object firstClusteringKeyVal = pageToCheck.getTuples().firstElement().getRecord().get(strClusteringKeyColumn);//Gets the first Value of the Clustering key in the page
             Object lastClusteringKeyVal = pageToCheck.getTuples().lastElement().getRecord().get(strClusteringKeyColumn);//Gets the last Value of the Clustering key in the page
             if(clusteringKeyVal instanceof String){
@@ -66,18 +70,25 @@ public class Table implements Serializable {
                 String castedClusteringKeyVal=(String) clusteringKeyVal;
                 int firstComparisonResult=castedFirstClusteringKeyVal.compareTo(castedClusteringKeyVal);
                 int lastComparisonResult=castedLastClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                if (firstComparisonResult == 1){
+                if(castedFirstClusteringKeyVal==castedLastClusteringKeyVal){
+                    return pageToCheck;
+                }
+                if (firstComparisonResult > 0){
                     highPageId=mid-1;
                     //go back
                 } else if (firstComparisonResult == 0){
                     //duplicate(throw DBException?)
-                } else if (firstComparisonResult == -1 && lastComparisonResult == 1){
+                } else if (firstComparisonResult < 0 && lastComparisonResult > 0){
                     // in between
                     return pageToCheck;
                 } else if (lastComparisonResult == 0){
                     //duplicate
-                } else if (lastComparisonResult == -1){
-                    lowPageId=mid+1;
+                } else if (lastComparisonResult < 0){
+                    if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getNumberOfRows()){
+                        return pageToCheck;
+                    }else{
+                        lowPageId=mid+1;
+                    }
                     //go forward
                 }
             } else if(clusteringKeyVal instanceof Integer){
@@ -86,6 +97,9 @@ public class Table implements Serializable {
                 Integer castedClusteringKeyVal=(Integer) clusteringKeyVal;
                 int firstComparisonResult=castedFirstClusteringKeyVal.compareTo(castedClusteringKeyVal);
                 int lastComparisonResult=castedLastClusteringKeyVal.compareTo(castedClusteringKeyVal);
+                if(castedFirstClusteringKeyVal==castedLastClusteringKeyVal){
+                    return pageToCheck;
+                }
                 if (firstComparisonResult == 1){
                     highPageId=mid-1;
                     //go back
@@ -97,8 +111,11 @@ public class Table implements Serializable {
                 } else if (lastComparisonResult == 0){
                     //duplicate
                 } else if (lastComparisonResult == -1){
-                    lowPageId=mid+1;
-                    //go forward
+                    if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getNumberOfRows()){
+                        return pageToCheck;
+                    }else{
+                        lowPageId=mid+1;
+                    }
                 }
             } else if(clusteringKeyVal instanceof Double){
                 Double castedFirstClusteringKeyVal = (Double) firstClusteringKeyVal;
@@ -106,6 +123,9 @@ public class Table implements Serializable {
                 Double castedClusteringKeyVal=(Double) clusteringKeyVal;
                 int firstComparisonResult=castedFirstClusteringKeyVal.compareTo(castedClusteringKeyVal);
                 int lastComparisonResult=castedLastClusteringKeyVal.compareTo(castedClusteringKeyVal);
+                if(castedFirstClusteringKeyVal==castedLastClusteringKeyVal){
+                    return pageToCheck;
+                }
                 if (firstComparisonResult == 1){
                     highPageId=mid-1;
                     //go back
@@ -117,8 +137,11 @@ public class Table implements Serializable {
                 } else if (lastComparisonResult == 0){
                     //duplicate
                 } else if (lastComparisonResult == -1){
-                    lowPageId=mid+1;
-                    //go forward
+                    if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getNumberOfRows()){
+                        return pageToCheck;
+                    }else{
+                        lowPageId=mid+1;
+                    }
                 }
             }
         }
@@ -127,10 +150,10 @@ public class Table implements Serializable {
 
     }
 
-    public Table loadTable() {
+    public static Table loadTable(String strTableName) {
         Table table = null;
         try {
-            FileInputStream fileInputStream = new FileInputStream("src/main" + strTableName + ".class");
+            FileInputStream fileInputStream = new FileInputStream("src/main/" + strTableName + ".class");
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             table = (Table) objectInputStream.readObject();
             fileInputStream.close();
@@ -200,5 +223,13 @@ public class Table implements Serializable {
 
     public void setIndexedColumns(Vector<String> indexedColumns) {
         this.indexedColumns = indexedColumns;
+    }
+
+    public int getNumOfPages() {
+        return numOfPages;
+    }
+
+    public void setNumOfPages(int numOfPages) {
+        this.numOfPages = numOfPages;
     }
 }
