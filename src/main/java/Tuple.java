@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.Serializable;
 import java.util.Hashtable;
 
@@ -29,3 +30,4 @@ public class Tuple implements Serializable {
         this.record = record;
     }
 }
+

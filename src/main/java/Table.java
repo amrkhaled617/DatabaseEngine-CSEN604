@@ -49,100 +49,48 @@ public class Table implements Serializable {
 
 
     public Page findPageByBinarySearch(Object clusteringKeyVal) throws DBAppException {
-  //      Collections.sort(pagesId);
-//        if(numOfPages==0){
-//            pagesId.add(++numOfPages);
-//            Page page = new Page(numOfPages) ;
-//            page.getTuples().add()
-//        }
-//        System.out.print(pagesId.toString());
         int lowPageId=0;
         int highPageId=pagesId.size()-1;
         while(lowPageId <= highPageId){//lesa hzbt el condition dah
             int mid= lowPageId + (highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
             Integer pageIdToGet = pagesId.get(mid);//the mid pageId
             Page pageToCheck = Page.loadPage(strTableName,pageIdToGet);//the actual mid Page
-            Object firstClusteringKeyVal = pageToCheck.getTuples().firstElement().getRecord().get(strClusteringKeyColumn);//Gets the first Value of the Clustering key in the page
-            Object lastClusteringKeyVal = pageToCheck.getTuples().lastElement().getRecord().get(strClusteringKeyColumn);//Gets the last Value of the Clustering key in the page
-            if(clusteringKeyVal instanceof String){
-                String castedFirstClusteringKeyVal = (String) firstClusteringKeyVal;
-                String castedLastClusteringKeyVal = (String) lastClusteringKeyVal;
-                String castedClusteringKeyVal=(String) clusteringKeyVal;
-                int firstComparisonResult=castedFirstClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                int lastComparisonResult=castedLastClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                if(castedFirstClusteringKeyVal==castedLastClusteringKeyVal){
+            Comparable firstClusteringKeyVal = (Comparable)pageToCheck.getTuples().firstElement().getRecord().get(strClusteringKeyColumn);//Gets the first Value of the Clustering key in the page
+            Comparable lastClusteringKeyVal = (Comparable)pageToCheck.getTuples().lastElement().getRecord().get(strClusteringKeyColumn);//Gets the last Value of the Clustering key in the page
+            Comparable castedClusteringKeyVal=(Comparable) clusteringKeyVal;
+            int firstComparisonResult=firstClusteringKeyVal.compareTo(castedClusteringKeyVal);
+            int lastComparisonResult=lastClusteringKeyVal.compareTo(castedClusteringKeyVal);
+            if(firstClusteringKeyVal==lastClusteringKeyVal){
+                return pageToCheck;
+            }
+            if (firstComparisonResult > 0){
+                if(pageToCheck.getPageId()==1){
                     return pageToCheck;
                 }
-                if (firstComparisonResult > 0){
-                    highPageId=mid-1;
-                    //go back
-                } else if (firstComparisonResult == 0){
-                    //duplicate(throw DBException?)
-                } else if (firstComparisonResult < 0 && lastComparisonResult > 0){
-                    // in between
+                highPageId=mid-1;
+                //go back
+            } else if (firstComparisonResult == 0){
+                //duplicate(throw DBException?)
+                throw new DBAppException("duplicate");
+            } else if (firstComparisonResult < 0 && lastComparisonResult > 0){
+                // in between
+                return pageToCheck;
+            } else if (lastComparisonResult == 0){
+                //duplicate
+                throw new DBAppException("duplicate");
+            } else if (lastComparisonResult < 0){
+                File file=new File("src/main/" + strTableName + (pageIdToGet+1) + ".class");
+                if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getTuples().size()){
                     return pageToCheck;
-                } else if (lastComparisonResult == 0){
-                    //duplicate
-                } else if (lastComparisonResult < 0){
-                    if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getNumberOfRows()){
-                        return pageToCheck;
-                    }else{
-                        lowPageId=mid+1;
-                    }
-                    //go forward
+                }else if(DBApp.getMaximumRowsCountinPage()==pageToCheck.getTuples().size() && !file.exists()) {
+                    Page page = new Page(pageIdToGet+1,strTableName);
+                    pagesId.add(pageIdToGet+1);
+                    page.savePage();
+                    return page;
+                }else{
+                    lowPageId=mid+1;
                 }
-            } else if(clusteringKeyVal instanceof Integer){
-                Integer castedFirstClusteringKeyVal = (Integer) firstClusteringKeyVal;
-                Integer castedLastClusteringKeyVal = (Integer) lastClusteringKeyVal;
-                Integer castedClusteringKeyVal=(Integer) clusteringKeyVal;
-                int firstComparisonResult=castedFirstClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                int lastComparisonResult=castedLastClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                if(castedFirstClusteringKeyVal==castedLastClusteringKeyVal){
-                    return pageToCheck;
-                }
-                if (firstComparisonResult == 1){
-                    highPageId=mid-1;
-                    //go back
-                } else if (firstComparisonResult == 0){
-                    //duplicate(throw DBException?)
-                } else if (firstComparisonResult == -1 && lastComparisonResult == 1){
-                    // in between
-                    return pageToCheck;
-                } else if (lastComparisonResult == 0){
-                    //duplicate
-                } else if (lastComparisonResult == -1){
-                    if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getNumberOfRows()){
-                        return pageToCheck;
-                    }else{
-                        lowPageId=mid+1;
-                    }
-                }
-            } else if(clusteringKeyVal instanceof Double){
-                Double castedFirstClusteringKeyVal = (Double) firstClusteringKeyVal;
-                Double castedLastClusteringKeyVal = (Double) lastClusteringKeyVal;
-                Double castedClusteringKeyVal=(Double) clusteringKeyVal;
-                int firstComparisonResult=castedFirstClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                int lastComparisonResult=castedLastClusteringKeyVal.compareTo(castedClusteringKeyVal);
-                if(castedFirstClusteringKeyVal==castedLastClusteringKeyVal){
-                    return pageToCheck;
-                }
-                if (firstComparisonResult == 1){
-                    highPageId=mid-1;
-                    //go back
-                } else if (firstComparisonResult == 0){
-                    //duplicate(throw DBException?)
-                } else if (firstComparisonResult == -1 && lastComparisonResult == 1){
-                    // in between
-                    return pageToCheck;
-                } else if (lastComparisonResult == 0){
-                    //duplicate
-                } else if (lastComparisonResult == -1){
-                    if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getNumberOfRows()){
-                        return pageToCheck;
-                    }else{
-                        lowPageId=mid+1;
-                    }
-                }
+                //go forward
             }
         }
         throw new DBAppException("Couldn't find PageId");

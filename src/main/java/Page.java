@@ -18,7 +18,7 @@ public class Page implements Serializable {
         int lowTupleIndex = 0;
         int highTupleIndex = tuples.size() - 1;
         Object clusteringKeyVal = htblColNameValue.get(strClusteringKeyColumn);
-        while(lowTupleIndex > highTupleIndex) {
+        while(lowTupleIndex <= highTupleIndex) {
             int mid = lowTupleIndex + (highTupleIndex - lowTupleIndex) / 2;
             Object midElement = tuples.get(mid).getRecord().get(strClusteringKeyColumn);
             if (clusteringKeyVal instanceof String) {
@@ -29,6 +29,7 @@ public class Page implements Serializable {
                     highTupleIndex=mid-1;
                 }else if(comparisonResult == 0){
                     //Duplicate
+                    throw new DBAppException("duplicate");
                 }else if(comparisonResult == -1){
                     lowTupleIndex=mid+1;
                 }
@@ -40,6 +41,7 @@ public class Page implements Serializable {
                     highTupleIndex = mid-1;
                 }else if(comparisonResult == 0){
                     //Duplicate
+                    throw new DBAppException("duplicate");
                 }else if(comparisonResult == -1){
                     lowTupleIndex = mid+1;
                 }
@@ -51,6 +53,7 @@ public class Page implements Serializable {
                     highTupleIndex = mid-1;
                 }else if(comparisonResult == 0){
                     //Duplicate
+                    throw new DBAppException("duplicate");
                 }else if(comparisonResult == -1){
                     lowTupleIndex = mid+1;
                 }
@@ -62,29 +65,47 @@ public class Page implements Serializable {
         //now u have exited the while loop --> lowtupleindex = highindex
         //CHECK IF PAGE IS FULL
         int MaximumRowsCountinPage = DBApp.getMaximumRowsCountinPage();
-        if(numberOfRows==MaximumRowsCountinPage){
-            Tuple t= new Tuple(tuples.lastElement().getRecord());
+        if(tuples.size()==MaximumRowsCountinPage) {
+            Tuple t = tuples.lastElement();
             tuples.remove(tuples.size() - 1);
-            File file = new File("src/main/" + strTableName + pageId+1 + ".class");
-            if(!file.exists()){
-                Page page= new Page(pageId+1,strTableName);
+            File file = new File("src/main/"+(strTableName)+ (pageId+1) +".class");
+            if (!file.exists()) {
+                Page page = new Page((pageId+1), strTableName);
+                Table table = Table.loadTable(page.strTableName);
+                table.getPagesId().add((pageId+1));
+                table.setNumOfPages(table.getNumOfPages() + 1);
+                table.saveTable();
                 page.savePage();
-                page.insertRowInPage(t.getRecord(),strClusteringKeyColumn);
             }
+
+            Page page = Page.loadPage(strTableName, (pageId+1));
+            page.insertRowInPage(t.getRecord(), strClusteringKeyColumn);
         }
         int mid = lowTupleIndex;
-        Comparable midElement = (Comparable) tuples.get(mid).getRecord().get(strClusteringKeyColumn);
-        if(midElement.compareTo(clusteringKeyVal)==1){
+        if(tuples.isEmpty()){
             Tuple tuple=new Tuple(htblColNameValue);
-            tuples.add(mid,tuple);
+            tuples.add(0,tuple);
             numberOfRows++;
             this.savePage();
+        }else {
+            if(mid==tuples.size()){
+                mid=tuples.size()-1;
+            }
+            Comparable midElement = (Comparable) tuples.get(mid).getRecord().get(strClusteringKeyColumn);
+            if(midElement.compareTo(clusteringKeyVal) > 0){
+                Tuple tuple=new Tuple(htblColNameValue);
+                tuples.add(mid,tuple);
+                numberOfRows++;
+                this.savePage();
+            }
+            else {
+                Tuple tuple=new Tuple(htblColNameValue);
+                tuples.add(mid+1,tuple);
+                numberOfRows++;
+                this.savePage();
+            }
         }
-        else {
-            Tuple tuple=new Tuple(htblColNameValue);
-            tuples.add(mid+1,tuple);
-            numberOfRows++;
-        }
+
         //Insert Input tuple to your page:
 
     }
@@ -235,6 +256,7 @@ public class Page implements Serializable {
         }
         return page;
     }
+
 
     public Integer getPageId() {
         return pageId;
