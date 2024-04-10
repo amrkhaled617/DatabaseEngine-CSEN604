@@ -60,7 +60,6 @@ public class Table implements Serializable {
         }else{
             throw new DBAppException("Datatype wrong in findPageByBinarySearchForUpdate");
         }
-
         while(lowPageId <= highPageId){//lesa hzbt el condition dah
             int mid= lowPageId + (highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
             Integer pageIdToGet = pagesId.get(mid);//the mid pageId

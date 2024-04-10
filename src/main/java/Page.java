@@ -139,7 +139,6 @@ public class Page implements Serializable {
                 lowTupleIndex = mid + 1;
             }
         }
-
                 throw new DBAppException("Couldnt find the row to update");
     }
 

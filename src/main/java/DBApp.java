@@ -361,8 +361,6 @@ public class DBApp {
 		for(Tuple tuple : tuples){
 			System.out.println(tuple.getRecord().toString());
 		}
-
-
 	}
 
 
