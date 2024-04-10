@@ -1,6 +1,7 @@
 import java.io.*;
 import java.util.Collections;
 import java.util.Hashtable;
+import java.util.Objects;
 import java.util.Vector;
 
 public class Table implements Serializable {
@@ -45,6 +46,49 @@ public class Table implements Serializable {
         return rows;
     }
 
+    public Page findPageByBinarySearchForUpdate(String clusteringKeyVal) throws DBAppException {
+        int lowPageId=0;
+        int highPageId=pagesId.size()-1;
+        String type = htblColNameType.get(strClusteringKeyColumn);
+        Object castedClusteringKeyVal=null;
+        if(Objects.equals(type, "java.lang.String")){
+             castedClusteringKeyVal = (String) clusteringKeyVal;
+        }else if(Objects.equals(type, "java.lang.Integer")){
+             castedClusteringKeyVal=(Integer)Integer.parseInt(clusteringKeyVal);
+        }else if(Objects.equals(type, "java.lang.Double")){
+             castedClusteringKeyVal=(Double)Double.parseDouble(clusteringKeyVal);
+        }else{
+            throw new DBAppException("Datatype wrong in findPageByBinarySearchForUpdate");
+        }
+
+        while(lowPageId <= highPageId){//lesa hzbt el condition dah
+            int mid= lowPageId + (highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
+            Integer pageIdToGet = pagesId.get(mid);//the mid pageId
+            Page pageToCheck = Page.loadPage(strTableName,pageIdToGet);//the actual mid Page
+            Comparable firstClusteringKeyVal = (Comparable)pageToCheck.getTuples().firstElement().getRecord().get(strClusteringKeyColumn);//Gets the first Value of the Clustering key in the page
+            Comparable lastClusteringKeyVal = (Comparable)pageToCheck.getTuples().lastElement().getRecord().get(strClusteringKeyColumn);//Gets the last Value of the Clustering key in the page
+            int firstComparisonResult=firstClusteringKeyVal.compareTo(castedClusteringKeyVal);
+            int lastComparisonResult=lastClusteringKeyVal.compareTo(castedClusteringKeyVal);
+            if (firstComparisonResult > 0){
+                highPageId=mid-1;
+                //go back
+            } else if (firstComparisonResult == 0){
+                return pageToCheck;
+            } else if (firstComparisonResult < 0 && lastComparisonResult > 0){
+                // in between
+                return pageToCheck;
+            } else if (lastComparisonResult == 0){
+                //duplicate
+                return pageToCheck;
+            } else if (lastComparisonResult < 0){
+                    lowPageId=mid+1;
+                //go forward
+            }
+        }
+        throw new DBAppException("Couldn't find PageId");
+
+
+    }
 
 
 

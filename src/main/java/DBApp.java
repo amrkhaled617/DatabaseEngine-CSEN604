@@ -269,6 +269,7 @@ public class DBApp {
 		}else {
 			table.insertRow(htblColNameValue);
 		}
+		table.saveTable();
 	}
 
 
@@ -279,13 +280,11 @@ public class DBApp {
 	public void updateTable(String strTableName, String strClusteringKeyValue, //howa el value 3alatool String wala eh dah
 							Hashtable<String,Object> htblColNameValue   )  throws DBAppException{
 		Table table = Table.loadTable(strTableName);
-		Page page= table.findPageByBinarySearch(strClusteringKeyValue);
+		Page page= table.findPageByBinarySearchForUpdate(strClusteringKeyValue);
 		String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
 
 		page.updateRowInPage(strClusteringKeyValue,strClusteringKeyColumn,htblColNameValue);
-
-
-		throw new DBAppException("not implemented yet");
+		page.savePage();
 	}
 
 
@@ -431,6 +430,11 @@ public class DBApp {
 			htblColNameValue.put("name", new String("Amr Khaled" ) );
 			htblColNameValue.put("gpa", new Double( 0.88 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
+			htblColNameValue.clear();
+			htblColNameValue.put("id", new Integer( 23499 ));
+			htblColNameValue.put("name", new String("Amr Khaled" ) );
+			htblColNameValue.put("gpa", new Double( 0.9 ) );
+			dbApp.updateTable(strTableName,"23499",htblColNameValue);
 			dbApp.printPage(1);
 //			System.out.println("");
 //			dbApp.printPage(2);
