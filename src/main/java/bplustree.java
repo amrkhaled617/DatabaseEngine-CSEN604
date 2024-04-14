@@ -1,10 +1,12 @@
 import java.io.*;
 import java.util.*;
 
-public class bplustree {
+public class bplustree implements Serializable {
 	int m;
 	InternalNode root;
 	LeafNode firstLeaf;
+	public bplustree(){}
+
 
 	/* ~~~~~~~~~~~~~~~~ HELPER FUNCTIONS ~~~~~~~~~~~~~~~~ */
 
@@ -18,6 +20,7 @@ public class bplustree {
 	 * @param t:   target key value of dictionary pair being searched for
 	 * @return index of the target value if found, else a negative value
 	 */
+
 	private int binarySearch(DictionaryPair[] dps, int numPairs, Comparable t) {
 		Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {
 			@Override
@@ -26,6 +29,31 @@ public class bplustree {
 			}
 		};
 		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, 0), c);
+	}
+	public static bplustree loadBPlusTree(String strTableName){
+		bplustree bPlusTree = null;
+		try {
+			FileInputStream fileInputStream = new FileInputStream("src/main/" +strTableName + "index.class");
+			ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+			bPlusTree = (bplustree) objectInputStream.readObject();
+			fileInputStream.close();
+			objectInputStream.close();
+		} catch (IOException | ClassNotFoundException i) {
+			i.printStackTrace();
+		}
+		return bPlusTree;
+	}
+	public void saveBPlusTree(String strTableName){
+		File file = new File("src/main/" + strTableName+"index.class");
+		try {
+			FileOutputStream fileOutputStream = new FileOutputStream(file);
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
+			objectOutputStream.writeObject(this);
+			objectOutputStream.close();
+			fileOutputStream.close();
+		} catch (IOException i){
+			i.printStackTrace();
+		}
 	}
 
 
@@ -972,7 +1000,7 @@ public class bplustree {
 	 * by m, the max degree of the B+ tree. The leaf nodes form a doubly linked
 	 * list that, i.e. each leaf node has a left and right sibling
 	 */
-	public class LeafNode extends Node {
+	public class LeafNode extends Node implements Serializable{
 		int maxNumPairs;
 		int minNumPairs;
 		int numPairs;
@@ -1104,7 +1132,7 @@ public class bplustree {
 	 * leaf nodes of the B+ tree. The class implements the Comparable interface
 	 * so that the DictionaryPair objects can be sorted later on.
 	 */
-	public class DictionaryPair implements Comparable<DictionaryPair> {
+	public class DictionaryPair implements Comparable<DictionaryPair>,Serializable{
 		Comparable key;
 		Comparable value;
 

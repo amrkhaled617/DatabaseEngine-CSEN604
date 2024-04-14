@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.Vector;
 
 public class Table implements Serializable {
-    private Vector<Integer> pagesId= new Vector<Integer>();
+    private Vector<Integer> pagesId= new Vector<>();
     private String strTableName;
     private String strClusteringKeyColumn;
     private Hashtable<String,String> htblColNameType;

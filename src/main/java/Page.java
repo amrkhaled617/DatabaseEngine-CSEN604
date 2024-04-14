@@ -73,12 +73,11 @@ public class Page implements Serializable {
             if (!file.exists()) {
                 Page page = new Page((pageId+1), strTableName);
                 Table table = Table.loadTable(page.strTableName);
-                table.getPagesId().add((pageId+1));
+                table.getPagesId().add(pageId+1);
                 table.setNumOfPages(table.getNumOfPages() + 1);
                 table.saveTable();
                 page.savePage();
             }
-
             Page page = Page.loadPage(strTableName, (pageId+1));
             page.insertRowInPage(t.getRecord(), strClusteringKeyColumn);
         }
@@ -133,6 +132,7 @@ public class Page implements Serializable {
                 highTupleIndex = mid - 1;
             } else if (comparisonResult == 0) {
                 //update this
+                htblColNameValue.put(strClusteringKeyColumn,castedClusteringKeyVal);
                 tuples.get(mid).setRecord(htblColNameValue);
                 return;
             } else if (comparisonResult == -1) {
@@ -147,6 +147,7 @@ public class Page implements Serializable {
             Hashtable<String,Object> record = tuple.getRecord();
             Comparable key = (Comparable) record.get(strColName);
             bPlusTree.insert(key,strTableName+pageId+".class");
+            bPlusTree.saveBPlusTree(strTableName);
         }
     }
     public Vector<Tuple> getRowsFromSQLTerm(SQLTerm sqlTerm) {
@@ -236,6 +237,19 @@ public class Page implements Serializable {
         Page page = null;
         try {
             FileInputStream fileInputStream = new FileInputStream("src/main/" +strTableName + pageId + ".class");
+            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
+            page = (Page) objectInputStream.readObject();
+            fileInputStream.close();
+            objectInputStream.close();
+        } catch (IOException | ClassNotFoundException i) {
+            i.printStackTrace();
+        }
+        return page;
+    }
+    public static Page loadPageForIndex(String nameOfFile){
+        Page page = null;
+        try {
+            FileInputStream fileInputStream = new FileInputStream("src/main/" + nameOfFile);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             page = (Page) objectInputStream.readObject();
             fileInputStream.close();
