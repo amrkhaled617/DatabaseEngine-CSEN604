@@ -5,7 +5,6 @@ public class bplustree implements Serializable {
 	int m;
 	InternalNode root;
 	LeafNode firstLeaf;
-	public bplustree(){}
 
 
 	/* ~~~~~~~~~~~~~~~~ HELPER FUNCTIONS ~~~~~~~~~~~~~~~~ */
@@ -30,10 +29,10 @@ public class bplustree implements Serializable {
 		};
 		return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, 0), c);
 	}
-	public static bplustree loadBPlusTree(String strTableName){
+	public static bplustree loadBPlusTree(String strTableName, String strColName){
 		bplustree bPlusTree = null;
 		try {
-			FileInputStream fileInputStream = new FileInputStream("src/main/" +strTableName + "index.class");
+			FileInputStream fileInputStream = new FileInputStream("src/main/" +strTableName +strColName+ "index.class");
 			ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
 			bPlusTree = (bplustree) objectInputStream.readObject();
 			fileInputStream.close();
@@ -43,8 +42,8 @@ public class bplustree implements Serializable {
 		}
 		return bPlusTree;
 	}
-	public void saveBPlusTree(String strTableName){
-		File file = new File("src/main/" + strTableName+"index.class");
+	public void saveBPlusTree(String strTableName, String strColName){
+		File file = new File("src/main/" + strTableName+ strColName+"index.class");
 		try {
 			FileOutputStream fileOutputStream = new FileOutputStream(file);
 			ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
@@ -796,7 +795,7 @@ public class bplustree implements Serializable {
 	 * This class represents a general node within the B+ tree and serves as a
 	 * superclass of InternalNode and LeafNode.
 	 */
-	public class Node {
+	public class Node implements Serializable {
 		InternalNode parent;
 	}
 
@@ -805,7 +804,7 @@ public class bplustree implements Serializable {
 	 * all search/insert/delete operations. An internal node only holds keys; it
 	 * does not hold dictionary pairs.
 	 */
-	private class InternalNode extends Node {
+	private class InternalNode extends Node implements Serializable{
 		int maxDegree;
 		int minDegree;
 		int degree;

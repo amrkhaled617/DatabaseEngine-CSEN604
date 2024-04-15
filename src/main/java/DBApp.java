@@ -149,6 +149,7 @@ public class DBApp {
 		}
 		//Add the columnname that will be indexed in the indexedcolumns Vector which is in the table class
 		table.getIndexedColumns().add(strColName);
+		table.saveTable();
 
 //		throw new DBAppException("not implemented yet");
 	}
@@ -279,23 +280,32 @@ public class DBApp {
 	public void updateTable(String strTableName, String strClusteringKeyValue, //howa el value 3alatool String wala eh dah
 							Hashtable<String,Object> htblColNameValue   )  throws DBAppException{
 		Table table = Table.loadTable(strTableName);
-		File file = new File("src/main/" + table.getStrTableName() + "index.class");
-		if(file.exists()){
-			bplustree bPlusTree = bplustree.loadBPlusTree(strTableName);
-			if(bPlusTree==null){
-				System.out.println("null");
-				return;
+		String dataTypeOfClusteringKey=table.getHtblColNameType().get(table.getStrClusteringKeyColumn());
+		if(!table.getIndexedColumns().isEmpty()){
+			Vector<String> indexedColumns=table.getIndexedColumns();
+			for(String indexedColumn : indexedColumns){
+				if(Objects.equals(indexedColumn, table.getStrClusteringKeyColumn())){
+					bplustree bPlusTree=bplustree.loadBPlusTree(strTableName,table.getStrClusteringKeyColumn());
+					Comparable nameOfPage=null;
+					if(Objects.equals(dataTypeOfClusteringKey, "java.lang.Integer")){
+						 nameOfPage = (Comparable) bPlusTree.search(Integer.parseInt(strClusteringKeyValue));
+					}else if(Objects.equals(dataTypeOfClusteringKey, "java.lang.String")){
+						 nameOfPage = (Comparable) bPlusTree.search(strClusteringKeyValue);
+					}else if(Objects.equals(dataTypeOfClusteringKey, "java.lang.Double")){
+						 nameOfPage = (Comparable) bPlusTree.search(Double.parseDouble(strClusteringKeyValue));
+					}
+					Page page = Page.loadPageForIndex((String) nameOfPage);
+					page.updateRowInPage(strClusteringKeyValue,table.getStrClusteringKeyColumn(),htblColNameValue);
+					page.savePage();
+					return;
+				}
 			}
-			Page page = Page.loadPageForIndex((String) bPlusTree.search(strClusteringKeyValue));
-			page.updateRowInPage(strClusteringKeyValue,table.getStrClusteringKeyColumn(),htblColNameValue);
-		}else {
+		}
 			Page page = table.findPageByBinarySearchForUpdate(strClusteringKeyValue);
 			String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
-
 			page.updateRowInPage(strClusteringKeyValue, strClusteringKeyColumn, htblColNameValue);
 			page.savePage();
 			table.saveTable();
-		}
 	}
 
 
@@ -416,7 +426,7 @@ public class DBApp {
 
 			Hashtable htblColNameValue = new Hashtable( );
 			htblColNameValue.put("id", new Integer( 2343432 ));
-			htblColNameValue.put("name", new String("Ahmed Noor" ) );
+			htblColNameValue.put("name", new String("mohamed el zohor" ) );
 			htblColNameValue.put("gpa", new Double( 0.95 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
 
@@ -424,7 +434,7 @@ public class DBApp {
 			htblColNameValue.clear( );
 			htblColNameValue.put("id", new Integer( 453455 ));
 			htblColNameValue.put("name", new String("Ahmed Noor" ) );
-			htblColNameValue.put("gpa", new Double( 0.95 ) );
+			htblColNameValue.put("gpa", new Double( 4.0 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
 
 			htblColNameValue.clear( );
@@ -454,9 +464,9 @@ public class DBApp {
 			htblColNameValue.clear( );
 			htblColNameValue.put("id", new Integer( 23499 ));
 			htblColNameValue.put("name", new String("Amr Khaled" ) );
-			htblColNameValue.put("gpa", new Double( 0.88 ) );
+			htblColNameValue.put("gpa", new Double( 0.8 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
-			dbApp.createIndex( strTableName, "gpa", "gpaIndex" );
+			dbApp.createIndex( strTableName, "id", "idIndex" );
 
 //			htblColNameValue.clear();
 //			htblColNameValue.put("name", new String("Amr Khaled" ) );
@@ -464,10 +474,13 @@ public class DBApp {
 			dbApp.printPage(strTableName,1);
 			System.out.println("");
 			dbApp.printPage(strTableName,2);
-			dbApp.printPagesId(strTableName);
+//			dbApp.printPagesId(strTableName);
 			System.out.println("");
-
-		dbApp.updateTable(strTableName,"23499",htblColNameValue);
+			htblColNameValue.clear();
+//			htblColNameValue.put("id",new Integer( 23499 ));
+			htblColNameValue.put("name", new String("Amr Khaled" ) );
+			htblColNameValue.put("gpa", new Double( 0.9 ) );
+			dbApp.updateTable(strTableName,"23499",htblColNameValue);
 			dbApp.printPage(strTableName,1);
 			System.out.println("");
 			dbApp.printPage(strTableName,2);

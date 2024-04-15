@@ -22,46 +22,17 @@ public class Page implements Serializable {
         while(lowTupleIndex <= highTupleIndex) {
             int mid = lowTupleIndex + (highTupleIndex - lowTupleIndex) / 2;
             Object midElement = tuples.get(mid).getRecord().get(strClusteringKeyColumn);
-            if (clusteringKeyVal instanceof String) {
-                String castedClusteringKeyVal = (String) clusteringKeyVal;
-                String castedmidElement = (String) midElement;
+                Comparable castedClusteringKeyVal = (Comparable) clusteringKeyVal;
+                Comparable castedmidElement = (Comparable) midElement;
                 int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
-                if (comparisonResult == 1){
+                if (comparisonResult > 0){
                     highTupleIndex=mid-1;
                 }else if(comparisonResult == 0){
                     //Duplicate
                     throw new DBAppException("duplicate");
-                }else if(comparisonResult == -1){
+                }else if(comparisonResult < 0){
                     lowTupleIndex=mid+1;
                 }
-            } else if (clusteringKeyVal instanceof Integer) {
-                Integer castedClusteringKeyVal = (Integer) clusteringKeyVal;
-                Integer castedmidElement = (Integer) midElement;
-                int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
-                if (comparisonResult == 1){
-                    highTupleIndex = mid-1;
-                }else if(comparisonResult == 0){
-                    //Duplicate
-                    throw new DBAppException("duplicate");
-                }else if(comparisonResult == -1){
-                    lowTupleIndex = mid+1;
-                }
-            } else if (clusteringKeyVal instanceof Double) {
-                Double castedClusteringKeyVal = (Double) clusteringKeyVal;
-                Double castedmidElement = (Double) midElement;
-                int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
-                if (comparisonResult == 1){
-                    highTupleIndex = mid-1;
-                }else if(comparisonResult == 0){
-                    //Duplicate
-                    throw new DBAppException("duplicate");
-                }else if(comparisonResult == -1){
-                    lowTupleIndex = mid+1;
-                }
-            } else {
-                throw new DBAppException("clusteringKeyVal has a invalid Datatype");
-            }
-
         }
         //now u have exited the while loop --> lowtupleindex = highindex
         //CHECK IF PAGE IS FULL
@@ -146,8 +117,9 @@ public class Page implements Serializable {
         for( Tuple tuple : tuples){
             Hashtable<String,Object> record = tuple.getRecord();
             Comparable key = (Comparable) record.get(strColName);
-            bPlusTree.insert(key,strTableName+pageId+".class");
-            bPlusTree.saveBPlusTree(strTableName);
+            Comparable value=(Comparable) (strTableName+pageId+".class");
+            bPlusTree.insert(key,value);
+            bPlusTree.saveBPlusTree(strTableName,strColName);
         }
     }
     public Vector<Tuple> getRowsFromSQLTerm(SQLTerm sqlTerm) {
@@ -246,10 +218,10 @@ public class Page implements Serializable {
         }
         return page;
     }
-    public static Page loadPageForIndex(String nameOfFile){
+    public static Page loadPageForIndex(String nameOfPage){
         Page page = null;
         try {
-            FileInputStream fileInputStream = new FileInputStream("src/main/" + nameOfFile);
+            FileInputStream fileInputStream = new FileInputStream("src/main/" + nameOfPage);
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             page = (Page) objectInputStream.readObject();
             fileInputStream.close();
