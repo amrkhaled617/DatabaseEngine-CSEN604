@@ -250,11 +250,10 @@ public class DBApp {
 		} catch (IOException e) {
             e.printStackTrace();
         }
+			if(table.getIndexedColumns().contains(strClusteringKeyColumn)){
 
-		if(!table.getIndexedColumns().isEmpty()){
-			String strColName = table.getIndexedColumns().get(0);
+			}
 
-		}
 		//Insert row into table
 		if(table.getNumOfPages()==0){
 			int newNumOfPages = table.getNumOfPages()+1;
@@ -324,16 +323,60 @@ public class DBApp {
 									String[]  strarrOperators) throws DBAppException{
 		checkSelectFromTableParameters(arrSQLTerms,strarrOperators);
 		Table table = Table.loadTable(arrSQLTerms[0]._strTableName);
-		Vector<Tuple> tuples = new Vector<Tuple>();
-		for (int i = 0; i < arrSQLTerms.length; i++) {
-			if(strarrOperators.length == 0){
-				tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
-			}else if(strarrOperators[0] == "AND") {
+		if(!table.getIndexedColumns().isEmpty()){
 
-			}else if(strarrOperators[0] =="OR"){
+		}
+		Vector<Tuple> tuples = new Vector<Tuple>();
+		Vector<Tuple> tuplesForAnd = new Vector<Tuple>();
+		if(strarrOperators[0] == "AND") {
+			for (int i = 0; i < arrSQLTerms.length; i++) {
+				if(i==0){
+					tuplesForAnd.addAll(table.getRowsFromSQLTerm(arrSQLTerms[0]));
+				}else {
+					Vector<Tuple> rowsToSelect = table.getRowsFromSQLTerm(arrSQLTerms[i]);
+					for(Tuple tuple : rowsToSelect) {
+						Comparable val = (Comparable) tuple.getRecord().get(table.getStrClusteringKeyColumn());
+						for (Tuple tuple1 : tuplesForAnd) {
+							if (val.compareTo((Comparable) tuple1.getRecord().get(table.getStrClusteringKeyColumn())) == 0) {
+								tuples.add(tuple1);
+								break;
+							}
+						}
+					}
+//					for (Tuple tuple : rowsToSelect) {
+//						if (tuplesForAnd.contains(tuple)) {
+//							tuples.add(tuple);
+//						}else{
+//							tuplesForAnd.remove(tuple);
+//						}
+//					}
+				}
+			}
+		}else if(strarrOperators[0] =="OR"){
+			for (int i = 0; i < arrSQLTerms.length; i++) {
 				tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
 			}
-
+		}else if(strarrOperators.length == 0){
+			for (int i = 0; i < arrSQLTerms.length; i++) {
+				tuples.addAll(table.getRowsFromSQLTerm(arrSQLTerms[i]));
+			}
+		}
+		if(tuples.size()>1){
+			for(Tuple tuple : tuples) {
+				Comparable val = (Comparable) tuple.getRecord().get(table.getStrClusteringKeyColumn());
+				tuples.remove(tuple);
+				boolean flag = false;
+				for (Tuple tuple1 : tuples) {
+					if (val.compareTo((Comparable) tuple1.getRecord().get(table.getStrClusteringKeyColumn())) == 0) {
+						break;
+					} else {
+						flag = true;
+					}
+					if(flag=true){
+						tuples.add(tuple1);
+					}
+				}
+			}
 		}
 		Iterator iteratorTuples = tuples.iterator();
 		table.unloadTable();
@@ -466,7 +509,7 @@ public class DBApp {
 			htblColNameValue.put("name", new String("Amr Khaled" ) );
 			htblColNameValue.put("gpa", new Double( 0.8 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
-			dbApp.createIndex( strTableName, "id", "idIndex" );
+//			dbApp.createIndex( strTableName, "id", "idIndex" );
 
 //			htblColNameValue.clear();
 //			htblColNameValue.put("name", new String("Amr Khaled" ) );
@@ -476,35 +519,39 @@ public class DBApp {
 			dbApp.printPage(strTableName,2);
 //			dbApp.printPagesId(strTableName);
 			System.out.println("");
-			htblColNameValue.clear();
+//			htblColNameValue.clear();
 //			htblColNameValue.put("id",new Integer( 23499 ));
-			htblColNameValue.put("name", new String("Amr Khaled" ) );
-			htblColNameValue.put("gpa", new Double( 0.9 ) );
-			dbApp.updateTable(strTableName,"23499",htblColNameValue);
-			dbApp.printPage(strTableName,1);
-			System.out.println("");
-			dbApp.printPage(strTableName,2);
+//			htblColNameValue.put("name", new String("Amr Khaled" ) );
+//			htblColNameValue.put("gpa", new Double( 0.9 ) );
+//			dbApp.updateTable(strTableName,"23499",htblColNameValue);
+//			dbApp.printPage(strTableName,1);
+//			System.out.println("");
+//			dbApp.printPage(strTableName,2);
 //
 //
 //			DBApp dbApp = new DBApp();
-//			SQLTerm[] arrSQLTerms;
-//			arrSQLTerms = new SQLTerm[2];
-//			arrSQLTerms[0]=new SQLTerm();
-//			arrSQLTerms[1]=new SQLTerm();
-//			arrSQLTerms[0]._strTableName =  "Student";
-//			arrSQLTerms[0]._strColumnName=  "name";
-//			arrSQLTerms[0]._strOperator  =  "=";
-//			arrSQLTerms[0]._objValue     =  "John Noor";
-//
-//			arrSQLTerms[1]._strTableName =  "Student";
-//			arrSQLTerms[1]._strColumnName=  "gpa";
-//			arrSQLTerms[1]._strOperator  =  "=";
-//			arrSQLTerms[1]._objValue     =   1.5 ;
-//
-//			String[]strarrOperators = new String[1];
-//			strarrOperators[0] = "OR";
-//			// select * from Student where name = "John Noor" or gpa = 1.5;
-//			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+			SQLTerm[] arrSQLTerms;
+			arrSQLTerms = new SQLTerm[2];
+			arrSQLTerms[0]=new SQLTerm();
+			arrSQLTerms[1]=new SQLTerm();
+			arrSQLTerms[0]._strTableName =  "Student";
+			arrSQLTerms[0]._strColumnName=  "name";
+			arrSQLTerms[0]._strOperator  =  "=";
+			arrSQLTerms[0]._objValue     =  "John Noor";
+
+			arrSQLTerms[1]._strTableName =  "Student";
+			arrSQLTerms[1]._strColumnName=  "gpa";
+			arrSQLTerms[1]._strOperator  =  "=";
+			arrSQLTerms[1]._objValue     =   1.5 ;
+
+			String[]strarrOperators = new String[1];
+			strarrOperators[0] = "AND";
+			// select * from Student where name = "John Noor" or gpa = 1.5;
+			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+			while (resultSet.hasNext()){
+				System.out.println(resultSet.next());
+			}
+
 		}
 		catch(Exception exp){
 			exp.printStackTrace( );
