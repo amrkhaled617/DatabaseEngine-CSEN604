@@ -1,8 +1,5 @@
 import java.io.*;
-import java.util.DuplicateFormatFlagsException;
-import java.util.Hashtable;
-import java.util.Objects;
-import java.util.Vector;
+import java.util.*;
 
 
 public class Page implements Serializable {
@@ -164,6 +161,94 @@ public class Page implements Serializable {
         return result;
     }
 
+    public void deleteRowFromPageBinary(Comparable PK,String strClusteringKeyColumn) throws DBAppException{
+        int lowTupleIndex = 0;
+        int highTupleIndex = tuples.size() - 1;
+        Object clusteringKeyVal = PK;
+        while(lowTupleIndex <= highTupleIndex) {
+            int mid = lowTupleIndex + (highTupleIndex - lowTupleIndex) / 2;
+            Object midElement = tuples.get(mid).getRecord().get(strClusteringKeyColumn);
+            Comparable castedClusteringKeyVal = (Comparable) clusteringKeyVal;
+            Comparable castedmidElement = (Comparable) midElement;
+            int comparisonResult = castedmidElement.compareTo(castedClusteringKeyVal);
+            if (comparisonResult == 1){
+                highTupleIndex=mid-1;
+            }else if(comparisonResult == 0){
+                //Duplicate
+                tuples.remove(mid);
+                numberOfRows--;
+                this.savePage();
+                return;
+            }else if(comparisonResult == -1){
+                lowTupleIndex=mid+1;
+            }
+            else {
+                throw new DBAppException("clusteringKeyVal has a invalid Datatype");
+            }
+        }
+        if(tuples.size()==DBApp.getMaximumRowsCountinPage()-1){
+            int i= pageId+1;
+            int j=pageId;
+            Table t = Table.loadTable(strTableName);
+            while((Integer) j<t.getPagesId().lastElement()){
+
+                Page pagei = Page.loadPage(strTableName, i);
+                Page pagej = Page.loadPage(strTableName, j);
+
+                Tuple tup= pagei.tuples.get(0);
+                pagej.tuples.add(tup);
+                pagej.numberOfRows++;
+                pagei.tuples.remove(tup);
+                pagei.numberOfRows--;
+                i++;
+                j++;
+                pagei.savePage();
+                pagej.savePage();
+            }
+        }
+    }
+    public void deleteRowFromPageLinear1(Comparable val,String colname) throws DBAppException{
+        //t2reeban el loop btbooz 34an ana b3ml remove w b loop 3ala nafs el tuples
+        int i=0;
+        while(i<tuples.size()){
+            Tuple tuple=tuples.get(i);
+            Comparable tupleVal=(Comparable) tuple.getRecord().get(colname);
+            if(tupleVal.compareTo(val)==0){
+                tuples.remove(tuple);
+                numberOfRows--;
+                this.savePage();
+            }else{
+                i++;
+            }
+        }
+    }
+    public void deleteRowFromPageLinear2(Hashtable<String,Object> htbl) throws DBAppException{
+        Enumeration keys=htbl.keys();
+        Enumeration values=htbl.elements();
+
+        for (Tuple tuple: tuples ){
+            Enumeration tuplekeys= tuple.getRecord().keys();
+            Enumeration tuplevalues = tuple.getRecord().elements();
+
+            Boolean flag=false;
+            while (tuplekeys.hasMoreElements()){
+                Comparable key = (Comparable) keys.nextElement();
+                Comparable val = (Comparable)htbl.get(key);
+                if (((Comparable)tuplekeys.nextElement()).equals(key)){
+                    flag=false;
+                    if (((Comparable)tuple.getRecord().get(tuplekeys.nextElement())).equals(val)){
+                        flag=true;
+                    }
+                }
+            }
+            if (flag==true){
+                tuples.remove(tuple);
+                numberOfRows--;
+                this.savePage();
+
+            }
+        }
+    }
 
 
 

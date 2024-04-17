@@ -45,6 +45,32 @@ public class Table implements Serializable {
         }
         return rows;
     }
+    public void deleteRowPrimary(Comparable htblColNameValuePK) throws DBAppException {
+        //find a way to binary search for finding page to delete
+        if(this.getPagesId().size()==0){
+            throw new DBAppException("Table is empty");
+        }
+        Page deleteFrom=findPageByBinarySearchForDelete(htblColNameValuePK);
+        deleteFrom.deleteRowFromPageBinary(htblColNameValuePK,strClusteringKeyColumn);
+
+    }
+    public void deleteRowSingle(Comparable val,String colname) throws DBAppException {
+        if (this.getPagesId().size() == 0)
+            throw new DBAppException("Table is empty");
+        for(Integer pageId: pagesId ){
+            Page page = Page.loadPage(strTableName, pageId);
+            page.deleteRowFromPageLinear1(val,colname);
+        }
+
+    }
+    public void deleteRowsMultiple(Hashtable<String,Object> htbl) throws DBAppException {
+        for(Integer pageId: pagesId ){
+            Page page = Page.loadPage(strTableName, pageId);
+            page.deleteRowFromPageLinear2(htbl);
+
+        }
+
+    }
 
     public Page findPageByBinarySearchForUpdate(String clusteringKeyVal) throws DBAppException {
         int lowPageId=0;
@@ -121,6 +147,53 @@ public class Table implements Serializable {
             } else if (lastComparisonResult == 0){
                 //duplicate
                 throw new DBAppException("duplicate");
+            } else if (lastComparisonResult < 0){
+                File file=new File("src/main/" + strTableName + (pageIdToGet+1) + ".class");
+                if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getTuples().size()){
+                    return pageToCheck;
+                }else if(DBApp.getMaximumRowsCountinPage()==pageToCheck.getTuples().size() && !file.exists()) {
+                    Page page = new Page(pageIdToGet+1,strTableName);
+                    pagesId.add(pageIdToGet+1);
+                    page.savePage();
+                    return page;
+                }else{
+                    lowPageId=mid+1;
+                }
+                //go forward
+            }
+        }
+        throw new DBAppException("Couldn't find PageId");
+
+
+    }
+    public Page findPageByBinarySearchForDelete(Object clusteringKeyVal) throws DBAppException {
+        int lowPageId=0;
+        int highPageId=pagesId.size()-1;
+        while(lowPageId <= highPageId){//lesa hzbt el condition dah
+            int mid= lowPageId + (highPageId-lowPageId)/2;//mid page Index in the pagesID Vector
+            Integer pageIdToGet = pagesId.get(mid);//the mid pageId
+            Page pageToCheck = Page.loadPage(strTableName,pageIdToGet);//the actual mid Page
+            Comparable firstClusteringKeyVal = (Comparable)pageToCheck.getTuples().firstElement().getRecord().get(strClusteringKeyColumn);//Gets the first Value of the Clustering key in the page
+            Comparable lastClusteringKeyVal = (Comparable)pageToCheck.getTuples().lastElement().getRecord().get(strClusteringKeyColumn);//Gets the last Value of the Clustering key in the page
+            Comparable castedClusteringKeyVal=(Comparable) clusteringKeyVal;
+            int firstComparisonResult=firstClusteringKeyVal.compareTo(castedClusteringKeyVal);
+            int lastComparisonResult=lastClusteringKeyVal.compareTo(castedClusteringKeyVal);
+            if(firstClusteringKeyVal==lastClusteringKeyVal){
+                return pageToCheck;
+            }
+            if (firstComparisonResult > 0){
+                if(pageToCheck.getPageId()==1){
+                    return pageToCheck;
+                }
+                highPageId=mid-1;
+                //go back
+            } else if (firstComparisonResult == 0){
+                return pageToCheck;
+            } else if (firstComparisonResult < 0 && lastComparisonResult > 0){
+                // in between
+                return pageToCheck;
+            } else if (lastComparisonResult == 0){
+                return pageToCheck;
             } else if (lastComparisonResult < 0){
                 File file=new File("src/main/" + strTableName + (pageIdToGet+1) + ".class");
                 if(DBApp.getMaximumRowsCountinPage()!=pageToCheck.getTuples().size()){

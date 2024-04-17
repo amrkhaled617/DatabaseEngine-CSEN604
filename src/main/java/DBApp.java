@@ -312,10 +312,97 @@ public class DBApp {
 	// htblColNameValue holds the key and value. This will be used in search 
 	// to identify which rows/tuples to delete. 	
 	// htblColNameValue enteries are ANDED together
-	public void deleteFromTable(String strTableName, 
-								Hashtable<String,Object> htblColNameValue) throws DBAppException{
+	public void deleteFromTable(String strTableName,
+								Hashtable<String,Object> htblColNameValue) throws DBAppException {
+		if (strTableName == null)
+			throw new DBAppException("strTableName is null");
+		if (htblColNameValue == null)
+			throw new DBAppException("htblColNameValue is null");
 
-		throw new DBAppException("not implemented yet");
+
+		Table table = Table.loadTable(strTableName);
+		String strClusteringKeyColumn = table.getStrClusteringKeyColumn();
+		//is the given primary key correct?
+
+		Enumeration<String> keys = htblColNameValue.keys();
+		Hashtable<String, String> htblColNameType = table.getHtblColNameType();
+		Enumeration<String> tableKeys = htblColNameType.keys();
+		ArrayList<String> arrKeys = Collections.list(keys);
+		ArrayList<String> arrTableKeys = Collections.list(tableKeys);
+		Collections.sort(arrKeys);
+		Collections.sort(arrTableKeys);
+		int numberOfColumns = arrTableKeys.size();
+		int length = arrKeys.size();
+		//checking for if the datatypes are correct in the htblColNameValue
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(metadata));
+			keys = htblColNameValue.keys();
+			Enumeration<Object> values = htblColNameValue.elements();
+			while (keys.hasMoreElements()) {
+				String colName = keys.nextElement();
+				Object colValue = values.nextElement();
+				String colType = table.getHtblColNameType().get(colName);
+				switch (colType) {
+					case "java.lang.Integer" -> {
+						if (!(colValue instanceof Integer))
+							throw new DBAppException("The Column type and the column value doesnt match");
+					}
+					case "java.lang.Double" -> {
+						if (!(colValue instanceof Double))
+							throw new DBAppException("The Column type and the column value doesnt match");
+					}
+					case "java.lang.String" -> {
+						if (!(colValue instanceof String))
+							throw new DBAppException("The Column type and the column value doesnt match");
+					}
+				}
+				String line = br.readLine();
+				while (line != null) {
+					String[] arrValues = line.split(",");
+					if (arrValues[0].equals(table.getStrTableName()) && arrValues[1].equals(colName)) {
+						if (!(arrValues[2].equals(colType))) {
+							throw new DBAppException("The Column type and the column value doesnt match regarding the metadata.csv file");
+						}
+						break;
+					}
+					line = br.readLine();
+				}
+
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		if (!table.getIndexedColumns().isEmpty()) {
+			String strColName = table.getIndexedColumns().get(0);
+
+		}
+		//divide the elements of htblcolnamevalue onto htbl to be able to do multiple deletes
+//		for(int i=0;i<repeat;i++){
+//			Vector<Comparable> primarykeyvalues= new Vector<>();
+//			Comparable val1 = (Comparable) htblColNameValue.get(strClusteringKeyColumn);
+//			while(primarykeyvalues.contains(val1)) {
+//				 val1 = (Comparable) htblColNameValue.get(strClusteringKeyColumn);
+//			}
+//			primarykeyvalues.add(val1);
+//
+//			if(table.getNumOfPages()>0)
+//				table.deleteRow(val1);
+//			else
+//				throw new DBAppException("Table is empty");
+//		}
+		if (arrKeys.size() == 1) {
+			if (htblColNameValue.containsKey(strClusteringKeyColumn)) {
+				table.deleteRowPrimary((Comparable) htblColNameValue.get(strClusteringKeyColumn));
+			} else {
+				table.deleteRowSingle((Comparable) htblColNameValue.elements().nextElement(), (String) htblColNameValue.keys().nextElement());
+
+
+			}
+		} else {
+			table.deleteRowsMultiple(htblColNameValue);
+
+		}
 	}
 
 
@@ -482,7 +569,7 @@ public class DBApp {
 
 			htblColNameValue.clear( );
 			htblColNameValue.put("id", new Integer( 5674567 ));
-			htblColNameValue.put("name", new String("Dalia Noor" ) );
+			htblColNameValue.put("name", new String("John Noor" ) );
 			htblColNameValue.put("gpa", new Double( 1.25 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
 
@@ -519,6 +606,13 @@ public class DBApp {
 			dbApp.printPage(strTableName,2);
 //			dbApp.printPagesId(strTableName);
 			System.out.println("");
+			htblColNameValue.clear();
+			htblColNameValue.put("id", new Integer(2343432));
+			dbApp.deleteFromTable(strTableName,htblColNameValue);
+			dbApp.printPage(strTableName,1);
+			System.out.println("");
+			dbApp.printPage(strTableName,2);
+			System.out.println("");
 //			htblColNameValue.clear();
 //			htblColNameValue.put("id",new Integer( 23499 ));
 //			htblColNameValue.put("name", new String("Amr Khaled" ) );
@@ -530,27 +624,27 @@ public class DBApp {
 //
 //
 //			DBApp dbApp = new DBApp();
-			SQLTerm[] arrSQLTerms;
-			arrSQLTerms = new SQLTerm[2];
-			arrSQLTerms[0]=new SQLTerm();
-			arrSQLTerms[1]=new SQLTerm();
-			arrSQLTerms[0]._strTableName =  "Student";
-			arrSQLTerms[0]._strColumnName=  "name";
-			arrSQLTerms[0]._strOperator  =  "=";
-			arrSQLTerms[0]._objValue     =  "John Noor";
-
-			arrSQLTerms[1]._strTableName =  "Student";
-			arrSQLTerms[1]._strColumnName=  "gpa";
-			arrSQLTerms[1]._strOperator  =  "=";
-			arrSQLTerms[1]._objValue     =   1.5 ;
-
-			String[]strarrOperators = new String[1];
-			strarrOperators[0] = "AND";
-			// select * from Student where name = "John Noor" or gpa = 1.5;
-			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
-			while (resultSet.hasNext()){
-				System.out.println(resultSet.next());
-			}
+//			SQLTerm[] arrSQLTerms;
+//			arrSQLTerms = new SQLTerm[2];
+//			arrSQLTerms[0]=new SQLTerm();
+//			arrSQLTerms[1]=new SQLTerm();
+//			arrSQLTerms[0]._strTableName =  "Student";
+//			arrSQLTerms[0]._strColumnName=  "name";
+//			arrSQLTerms[0]._strOperator  =  "=";
+//			arrSQLTerms[0]._objValue     =  "John Noor";
+//
+//			arrSQLTerms[1]._strTableName =  "Student";
+//			arrSQLTerms[1]._strColumnName=  "gpa";
+//			arrSQLTerms[1]._strOperator  =  "=";
+//			arrSQLTerms[1]._objValue     =   1.5 ;
+//
+//			String[]strarrOperators = new String[1];
+//			strarrOperators[0] = "AND";
+//			// select * from Student where name = "John Noor" or gpa = 1.5;
+//			Iterator resultSet = dbApp.selectFromTable(arrSQLTerms , strarrOperators);
+//			while (resultSet.hasNext()){
+//				System.out.println(resultSet.next());
+//			}
 
 		}
 		catch(Exception exp){
