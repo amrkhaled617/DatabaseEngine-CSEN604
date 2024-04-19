@@ -325,14 +325,8 @@ public class DBApp {
 		//is the given primary key correct?
 
 		Enumeration<String> keys = htblColNameValue.keys();
-		Hashtable<String, String> htblColNameType = table.getHtblColNameType();
-		Enumeration<String> tableKeys = htblColNameType.keys();
 		ArrayList<String> arrKeys = Collections.list(keys);
-		ArrayList<String> arrTableKeys = Collections.list(tableKeys);
-		Collections.sort(arrKeys);
-		Collections.sort(arrTableKeys);
-		int numberOfColumns = arrTableKeys.size();
-		int length = arrKeys.size();
+
 		//checking for if the datatypes are correct in the htblColNameValue
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(metadata));
@@ -393,15 +387,62 @@ public class DBApp {
 //		}
 		if (arrKeys.size() == 1) {
 			if (htblColNameValue.containsKey(strClusteringKeyColumn)) {
-				table.deleteRowPrimary((Comparable) htblColNameValue.get(strClusteringKeyColumn));
+				//Delete with index for primary key
+				if(table.getIndexedColumns().contains(strClusteringKeyColumn)){
+					bplustree bPlusTree = bplustree.loadBPlusTree(strTableName,strClusteringKeyColumn);
+					Comparable pageName = bPlusTree.search((Comparable) htblColNameValue.get(strClusteringKeyColumn));
+					Page page = Page.loadPageForIndex((String)pageName);
+					page.deleteRowFromPageBinary((Comparable) htblColNameValue.get(strClusteringKeyColumn),strClusteringKeyColumn);
+				}else {
+					//Delete without index for primary key
+					table.deleteRowPrimary((Comparable) htblColNameValue.get(strClusteringKeyColumn));
+				}
 			} else {
-				table.deleteRowSingle((Comparable) htblColNameValue.elements().nextElement(), (String) htblColNameValue.keys().nextElement());
-
+				//Delete with index for Column(not Primary Key)
+				Enumeration<String> colEnum= htblColNameValue.keys();
+				String col = colEnum.nextElement();
+				if(table.getIndexedColumns().contains(col)){
+					bplustree bPlusTree = bplustree.loadBPlusTree(strTableName,col);
+					ArrayList<Comparable> pageNames = bPlusTree.search((Comparable) htblColNameValue.get(col),(Comparable)htblColNameValue.get(col));
+					for(Comparable pageName : pageNames ){
+						Page page = Page.loadPageForIndex((String)pageName);
+						page.deleteRowFromPageLinear1((Comparable) htblColNameValue.get(col),col);
+					}
+				}else {
+					//Delete without index for Column(not Primary Key)
+					table.deleteRowSingle((Comparable) htblColNameValue.elements().nextElement(), (String) htblColNameValue.keys().nextElement());
+				}
 
 			}
 		} else {
-			table.deleteRowsMultiple(htblColNameValue);
+			//Check if all columns in htblValue have index
+			Enumeration<String> htblkeys = htblColNameValue.keys();
+			boolean flag = true;
+			while(htblkeys.hasMoreElements()){
+				String col = htblkeys.nextElement();
+				if(!table.getIndexedColumns().contains(col)){
+					flag=false;
+					break;
+				}
+			}
+			if (flag) {
+				//Delete with index for Multiple Columns(if all columns in htbl have index)
+				htblkeys=htblColNameValue.keys();
+				ArrayList<Comparable> pageNames = new ArrayList<>();
 
+				while(htblkeys.hasMoreElements()){
+					String col=htblkeys.nextElement();
+					bplustree bPlusTree = bplustree.loadBPlusTree(strTableName,col);
+					pageNames.addAll(bPlusTree.search((Comparable) htblColNameValue.get(col),(Comparable)htblColNameValue.get(col)));
+				}
+				for(Comparable pageName : pageNames ){
+					Page page = Page.loadPageForIndex((String)pageName);
+					page.deleteRowFromPageLinear2(htblColNameValue);
+				}
+			} else{
+				//Delete without index for Multiple Columns
+				table.deleteRowsMultiple(htblColNameValue);
+			}
 		}
 	}
 
@@ -596,7 +637,7 @@ public class DBApp {
 			htblColNameValue.put("name", new String("Amr Khaled" ) );
 			htblColNameValue.put("gpa", new Double( 0.8 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
-//			dbApp.createIndex( strTableName, "id", "idIndex" );
+			dbApp.createIndex( strTableName, "name", "nameIndex" );
 
 //			htblColNameValue.clear();
 //			htblColNameValue.put("name", new String("Amr Khaled" ) );
@@ -607,7 +648,7 @@ public class DBApp {
 //			dbApp.printPagesId(strTableName);
 			System.out.println("");
 			htblColNameValue.clear();
-			htblColNameValue.put("id", new Integer(2343432));
+			htblColNameValue.put("name", new String("John Noor"));
 			dbApp.deleteFromTable(strTableName,htblColNameValue);
 			dbApp.printPage(strTableName,1);
 			System.out.println("");
