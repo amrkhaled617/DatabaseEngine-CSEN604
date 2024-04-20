@@ -202,29 +202,45 @@ public class Page implements Serializable {
     }
     public void deleteRowFromPageLinear2(Hashtable<String,Object> htbl) throws DBAppException{
         Enumeration keys=htbl.keys();
-        Enumeration values=htbl.elements();
-
-        for (Tuple tuple: tuples ){
+        int i=0;
+        while(i<tuples.size()){
+            Tuple tuple=tuples.get(i);
             Enumeration tuplekeys= tuple.getRecord().keys();
-            Enumeration tuplevalues = tuple.getRecord().elements();
-
-            Boolean flag=false;
+            ArrayList<Boolean> Flags = new ArrayList<>();
+            Boolean flag=true;
             while (tuplekeys.hasMoreElements()){
-                Comparable key = (Comparable) keys.nextElement();
-                Comparable val = (Comparable)htbl.get(key);
-                if (((Comparable)tuplekeys.nextElement()).equals(key)){
-                    flag=false;
-                    if (((Comparable)tuple.getRecord().get(tuplekeys.nextElement())).equals(val)){
-                        flag=true;
+                Comparable tupkey = (Comparable) tuplekeys.nextElement();
+                while(keys.hasMoreElements()){
+                    Comparable key = (Comparable) keys.nextElement();
+                    Comparable val = (Comparable)htbl.get(key);
+
+                    if (tupkey.equals(key)){
+
+                        if (((Comparable)tuple.getRecord().get(tupkey)).equals(val)){
+                            Flags.add(true);
+
+                        }else{ Flags.add(false);}
                     }
+
+                }keys=htbl.keys();
+
+            }for(int j=0;j<Flags.size();j++){
+                if(Flags.get(j).equals(false)){
+                    flag=false;
+
                 }
+            }
+            if(Flags.isEmpty()){
+                flag=false;
             }
             if (flag==true){
                 tuples.remove(tuple);
                 numberOfRows--;
                 this.savePage();
-                this.unloadPage();
             }
+            Flags.clear();
+            flag=true;
+            i++;
         }
     }
 

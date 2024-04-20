@@ -283,7 +283,7 @@ public class DBApp {
 	// htblColNameValue holds the key and new value 
 	// htblColNameValue will not include clustering key as column name
 	// strClusteringKeyValue is the value to look for to find the row to update.
-	public void updateTable(String strTableName, String strClusteringKeyValue, //howa el value 3alatool String wala eh dah
+	public void updateTable(String strTableName, String strClusteringKeyValue,
 							Hashtable<String,Object> htblColNameValue   )  throws DBAppException{
 		Table table = Table.loadTable(strTableName);
 		String dataTypeOfClusteringKey=table.getHtblColNameType().get(table.getStrClusteringKeyColumn());
@@ -475,9 +475,6 @@ public class DBApp {
 									String[]  strarrOperators) throws DBAppException{
 		checkSelectFromTableParameters(arrSQLTerms,strarrOperators);
 		Table table = Table.loadTable(arrSQLTerms[0]._strTableName);
-		if(!table.getIndexedColumns().isEmpty()){
-
-		}
 		Vector<Tuple> tuples = new Vector<Tuple>();
 		Vector<Tuple> tuplesForAnd = new Vector<Tuple>();
 		if(strarrOperators[0] == "AND") {
@@ -600,7 +597,7 @@ public class DBApp {
 			htblColNameType.put("name", "java.lang.String");
 			htblColNameType.put("gpa", "java.lang.Double");
 			dbApp.createTable( strTableName, "id", htblColNameType );
-			dbApp.createIndex( strTableName, "name", "nameIndex" );
+//			dbApp.createIndex( strTableName, "name", "nameIndex" );
 
 
 			Hashtable htblColNameValue = new Hashtable( );
@@ -634,7 +631,7 @@ public class DBApp {
 
 			htblColNameValue.clear( );
 			htblColNameValue.put("id", new Integer( 78452 ));
-			htblColNameValue.put("name", new String("Zaky Noor" ) );
+			htblColNameValue.put("name", new String("Ahmed Noor" ) );
 			htblColNameValue.put("gpa", new Double( 0.88 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
 
@@ -654,12 +651,12 @@ public class DBApp {
 //			dbApp.printPagesId(strTableName);
 			System.out.println("");
 			htblColNameValue.clear();
-			htblColNameValue.put("name", new String("John Noor"));
+			htblColNameValue.put("id", new Integer(5674567));
 			dbApp.deleteFromTable(strTableName,htblColNameValue);
 			dbApp.printPage(strTableName,1);
 			System.out.println("");
 			dbApp.printPage(strTableName,2);
-			System.out.println("");
+//			System.out.println("");
 //			htblColNameValue.clear();
 //			htblColNameValue.put("id",new Integer( 23499 ));
 //			htblColNameValue.put("name", new String("Amr Khaled" ) );
