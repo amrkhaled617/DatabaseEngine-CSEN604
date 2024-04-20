@@ -119,7 +119,6 @@ public class DBApp {
 			throw new DBAppException("strColName is null");
 		if (strIndexName == null)
 			throw new DBAppException("strIndexName is null");
-
 		//check if table exists
 		boolean existFlag=false;
 		for (Table table : tables) {
@@ -144,6 +143,7 @@ public class DBApp {
 		if(Objects.equals(colNameDataType, "java.lang.Integer") || Objects.equals(colNameDataType, "java.lang.String") || Objects.equals(colNameDataType, "java.lang.Double")){
 			bplustree bPlusTree = new bplustree(128);
 			table.populateTree(bPlusTree,strColName);
+			bPlusTree.saveBPlusTree(strTableName,strColName);
 		}else{
 			throw new DBAppException("colNameDataType is not integer/string/double");
 		}
@@ -250,9 +250,6 @@ public class DBApp {
 		} catch (IOException e) {
             e.printStackTrace();
         }
-			if(table.getIndexedColumns().contains(strClusteringKeyColumn)){
-
-			}
 
 		//Insert row into table
 		if(table.getNumOfPages()==0){
@@ -268,6 +265,16 @@ public class DBApp {
 
 		}else {
 			table.insertRow(htblColNameValue);
+		}
+		//Updating the B+ Tree
+		if(!table.getIndexedColumns().isEmpty()){
+			Vector<String> indexedColumns=table.getIndexedColumns();
+			for (String indexedCol : indexedColumns){
+				File file =new File(strTableName+indexedCol+"index.class");
+				file.delete();
+				bplustree bPlusTree = new bplustree(128);
+				table.populateTree(bPlusTree,indexedCol);
+			}
 		}
 	}
 
@@ -296,6 +303,7 @@ public class DBApp {
 					Page page = Page.loadPageForIndex((String) nameOfPage);
 					page.updateRowInPage(strClusteringKeyValue,table.getStrClusteringKeyColumn(),htblColNameValue);
 					page.savePage();
+					page.unloadPage();
 					return;
 				}
 			}
@@ -305,6 +313,8 @@ public class DBApp {
 			page.updateRowInPage(strClusteringKeyValue, strClusteringKeyColumn, htblColNameValue);
 			page.savePage();
 			table.saveTable();
+			table.unloadTable();
+			page.unloadPage();
 	}
 
 
@@ -393,6 +403,7 @@ public class DBApp {
 					Comparable pageName = bPlusTree.search((Comparable) htblColNameValue.get(strClusteringKeyColumn));
 					Page page = Page.loadPageForIndex((String)pageName);
 					page.deleteRowFromPageBinary((Comparable) htblColNameValue.get(strClusteringKeyColumn),strClusteringKeyColumn);
+					table.fillPages(table.getPagesId().firstElement());
 				}else {
 					//Delete without index for primary key
 					table.deleteRowPrimary((Comparable) htblColNameValue.get(strClusteringKeyColumn));
@@ -408,6 +419,8 @@ public class DBApp {
 						Page page = Page.loadPageForIndex((String)pageName);
 						page.deleteRowFromPageLinear1((Comparable) htblColNameValue.get(col),col);
 					}
+					table.fillPages(table.getPagesId().firstElement());
+
 				}else {
 					//Delete without index for Column(not Primary Key)
 					table.deleteRowSingle((Comparable) htblColNameValue.elements().nextElement(), (String) htblColNameValue.keys().nextElement());
@@ -439,9 +452,20 @@ public class DBApp {
 					Page page = Page.loadPageForIndex((String)pageName);
 					page.deleteRowFromPageLinear2(htblColNameValue);
 				}
+				table.fillPages(table.getPagesId().firstElement());
 			} else{
 				//Delete without index for Multiple Columns
 				table.deleteRowsMultiple(htblColNameValue);
+			}
+		}
+		//Updating the B+ Tree
+		if(!table.getIndexedColumns().isEmpty()){
+			Vector<String> indexedColumns=table.getIndexedColumns();
+			for (String indexedCol : indexedColumns){
+				File file =new File(strTableName+indexedCol+"index.class");
+				file.delete();
+				bplustree bPlusTree = new bplustree(128);
+				table.populateTree(bPlusTree,indexedCol);
 			}
 		}
 	}
@@ -471,13 +495,6 @@ public class DBApp {
 							}
 						}
 					}
-//					for (Tuple tuple : rowsToSelect) {
-//						if (tuplesForAnd.contains(tuple)) {
-//							tuples.add(tuple);
-//						}else{
-//							tuplesForAnd.remove(tuple);
-//						}
-//					}
 				}
 			}
 		}else if(strarrOperators[0] =="OR"){
@@ -554,15 +571,6 @@ public class DBApp {
 		for(Tuple tuple : tuples){
 			System.out.println(tuple.getRecord().toString());
 		}
-//		Table table = Table.loadTable(strTableName);
-//		Vector<Integer> pagesId = table.getPagesId();
-//		for(Integer pageId : pagesId){
-//			Page page = Page.loadPage(strTableName,pageId);
-//			Vector<Tuple> tuples = page.getTuples();
-//			for( Tuple tuple : tuples){
-//				System.out.println(tuple.getRecord().toString());
-//			}
-//		}
 	}
 	public void printPagesId(String strTableName){
 		Table table=Table.loadTable(strTableName);
@@ -571,8 +579,6 @@ public class DBApp {
 			System.out.println(pageId);
 		}
 	}
-
-
 
 	public static int getMaximumRowsCountinPage() {
 		return maximumRowsCountinPage;
@@ -594,6 +600,8 @@ public class DBApp {
 			htblColNameType.put("name", "java.lang.String");
 			htblColNameType.put("gpa", "java.lang.Double");
 			dbApp.createTable( strTableName, "id", htblColNameType );
+			dbApp.createIndex( strTableName, "name", "nameIndex" );
+
 
 			Hashtable htblColNameValue = new Hashtable( );
 			htblColNameValue.put("id", new Integer( 2343432 ));
@@ -637,8 +645,6 @@ public class DBApp {
 			htblColNameValue.put("name", new String("Amr Khaled" ) );
 			htblColNameValue.put("gpa", new Double( 0.8 ) );
 			dbApp.insertIntoTable( strTableName , htblColNameValue );
-			dbApp.createIndex( strTableName, "name", "nameIndex" );
-
 //			htblColNameValue.clear();
 //			htblColNameValue.put("name", new String("Amr Khaled" ) );
 //			htblColNameValue.put("gpa", new Double( 0.9 ) );

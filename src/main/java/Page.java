@@ -73,9 +73,6 @@ public class Page implements Serializable {
                 this.savePage();
             }
         }
-
-        //Insert Input tuple to your page:
-
     }
     public void updateRowInPage(String clusteringKeyVal,String strClusteringKeyColumn,Hashtable<String,Object> htblColNameValue) throws DBAppException {
         int lowTupleIndex = 0;
@@ -178,32 +175,13 @@ public class Page implements Serializable {
                 tuples.remove(mid);
                 numberOfRows--;
                 this.savePage();
+                this.unloadPage();
                 return;
             }else if(comparisonResult == -1){
                 lowTupleIndex=mid+1;
             }
             else {
                 throw new DBAppException("clusteringKeyVal has a invalid Datatype");
-            }
-        }
-        if(tuples.size()==DBApp.getMaximumRowsCountinPage()-1){
-            int i= pageId+1;
-            int j=pageId;
-            Table t = Table.loadTable(strTableName);
-            while((Integer) j<t.getPagesId().lastElement()){
-
-                Page pagei = Page.loadPage(strTableName, i);
-                Page pagej = Page.loadPage(strTableName, j);
-
-                Tuple tup= pagei.tuples.get(0);
-                pagej.tuples.add(tup);
-                pagej.numberOfRows++;
-                pagei.tuples.remove(tup);
-                pagei.numberOfRows--;
-                i++;
-                j++;
-                pagei.savePage();
-                pagej.savePage();
             }
         }
     }
@@ -245,7 +223,7 @@ public class Page implements Serializable {
                 tuples.remove(tuple);
                 numberOfRows--;
                 this.savePage();
-
+                this.unloadPage();
             }
         }
     }

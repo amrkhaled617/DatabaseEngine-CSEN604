@@ -26,7 +26,14 @@ public class Table implements Serializable {
         //insert the row in the page
         pageToInsertInto.insertRowInPage(htblColNameValue,strClusteringKeyColumn);
         //update indices(idk what this means lesa)
-
+//        if(!this.indexedColumns.isEmpty()){
+//            for(String indexedCol : indexedColumns){
+//                bplustree bPlusTree =bplustree.loadBPlusTree(strTableName,indexedCol);
+//                Comparable value=(Comparable) (strTableName+pageToInsertInto.getPageId()+".class");
+//                bPlusTree.insert((Comparable) htblColNameValue.get(indexedCol),value);
+//                bPlusTree.saveBPlusTree(strTableName,indexedCol);
+//            }
+//        }
     }
     public void populateTree(bplustree bPlusTree,String strColName){
 
@@ -52,7 +59,7 @@ public class Table implements Serializable {
         }
         Page deleteFrom=findPageByBinarySearchForDelete(htblColNameValuePK);
         deleteFrom.deleteRowFromPageBinary(htblColNameValuePK,strClusteringKeyColumn);
-
+        fillPages(this.getPagesId().firstElement());
     }
     public void deleteRowSingle(Comparable val,String colname) throws DBAppException {
         if (this.getPagesId().size() == 0)
@@ -61,15 +68,47 @@ public class Table implements Serializable {
             Page page = Page.loadPage(strTableName, pageId);
             page.deleteRowFromPageLinear1(val,colname);
         }
+        fillPages(this.getPagesId().firstElement());
 
     }
     public void deleteRowsMultiple(Hashtable<String,Object> htbl) throws DBAppException {
         for(Integer pageId: pagesId ){
             Page page = Page.loadPage(strTableName, pageId);
             page.deleteRowFromPageLinear2(htbl);
-
         }
+        fillPages(this.getPagesId().firstElement());
 
+
+    }
+    public void fillPages(int pageid){
+        Page page=Page.loadPage(strTableName,pageid);
+        if(page.getTuples().size()!=DBApp.getMaximumRowsCountinPage()){
+            int i= 2;
+            int j=1;
+            Table t = Table.loadTable(strTableName);
+            while((Integer) j<t.getPagesId().lastElement()){
+
+                Page pagei = Page.loadPage(strTableName, i);
+                Page pagej = Page.loadPage(strTableName, j);
+
+                while(pagej.getTuples().size()!=DBApp.getMaximumRowsCountinPage()){
+                    if(pagei.getTuples().size()==0)
+                        break;
+                    else {
+                        Tuple tup = pagei.getTuples().get(0);
+                        pagej.getTuples().add(tup);
+//                pagej.numberOfRows++;
+                        pagei.getTuples().remove(tup);
+//                pagei.numberOfRows--;
+
+                        pagei.savePage();
+                        pagej.savePage();
+                    }
+                }
+                i++;
+                j++;
+            }
+        }
     }
 
     public Page findPageByBinarySearchForUpdate(String clusteringKeyVal) throws DBAppException {
